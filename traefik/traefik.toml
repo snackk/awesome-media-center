@@ -3,10 +3,6 @@ logLevel = "ERROR"
 
 defaultEntryPoints = ["http", "https"]
 
-[web]
-# Port for the status page
-address = ":8080"
-
 [entryPoints]
     [entryPoints.http]
     address = ":80"
@@ -21,15 +17,14 @@ address = ":8080"
 
 [docker]
 endpoint = "unix:///var/run/docker.sock"
-domain = "example.com"
+domain = "tiles.social"
 watch = true
 exposedByDefault = false
 
 [acme]
-email = "admin@example.com"
+email = "snackk026@gmail.com"
 storage = "acme.json"
 entryPoint = "https"
-# onDemand = true
 onHostRule = true
 
 [acme.httpChallenge]

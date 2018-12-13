@@ -1,0 +1,21 @@
+version: '2'
+
+services:
+  emby:
+    image: emby/embyserver
+    container_name: emby
+    volumes:
+      - /mainstorage/emby/config:/config
+      - /mainstorage/nextcloud/data/admin/files/Audiobooks:/mnt/audiobooks
+      - /mainstorage/nextcloud/data/admin/files/Music:/mnt/music
+      - /mainstorage/nextcloud/data/admin/files/Movies:/mnt/movie
+    devices:
+      - /dev/dri/renderD128
+    labels:
+      - traefik.backend=emby
+      - traefik.frontend.rule=Host:emby.domain.com
+      - traefik.docker.network=proxy
+      - traefik.port=8096      
+    networks:
+      - proxy-tier
+    restart: always  

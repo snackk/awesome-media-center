@@ -15,11 +15,11 @@ services:
       - ${PWD}/traefik.toml:/traefik.toml
       - ${PWD}/acme.json:/acme.json
     labels:
-      - "traefik.enable=true"
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:tiles.social"
-      - "traefik.port=8080"
-      - "traefik.frontend.auth.basic=snackk:$$apr1$$YYWg8bcC$$AidkBaVLkJS0/9Aya8B8D."
+      - "traefik.frontend.rule=Host:localhost"
+      - "traefik.port=9001"
+      - "traefik.backend=traefik"
+      - "traefik.frontend.auth.basic=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
 
 networks:
   web:

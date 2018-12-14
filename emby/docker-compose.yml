@@ -1,21 +1,28 @@
-version: '2'
+version: '3'
 
 services:
   emby:
     image: emby/embyserver
     container_name: emby
+    restart: always  
+    networks:
+      - web
     volumes:
-      - /mainstorage/emby/config:/config
-      - /mainstorage/nextcloud/data/admin/files/Audiobooks:/mnt/audiobooks
-      - /mainstorage/nextcloud/data/admin/files/Music:/mnt/music
-      - /mainstorage/nextcloud/data/admin/files/Movies:/mnt/movie
+      - /home/snackk/emby/config:/config
+      - /home/snackk/Downloads/movies:/mnt/movies
+      - /home/snackk/Downloads/shows:/mnt/shows
     devices:
       - /dev/dri/renderD128
     labels:
-      - traefik.backend=emby
-      - traefik.frontend.rule=Host:emby.domain.com
-      - traefik.docker.network=proxy
-      - traefik.port=8096      
-    networks:
-      - proxy-tier
-    restart: always  
+      - "traefik.docker.network=web"
+      - "traefik.frontend.rule=Host:emby.localhost"      
+      - "traefik.port=8096"
+      - "traefik.backend=emby"  
+    environment:
+      - "UID=1000" 
+      - "GID=100" 
+      - "GIDLIST=100" 
+
+networks:
+  web:
+    external: true

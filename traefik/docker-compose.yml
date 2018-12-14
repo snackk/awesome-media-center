@@ -8,6 +8,8 @@ services:
     ports:
       - 80:80
       - 443:443
+    expose:
+      - 8080      
     networks:
       - web
     volumes:
@@ -16,10 +18,9 @@ services:
       - ${PWD}/acme.json:/acme.json
     labels:
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:localhost"
-      - "traefik.port=9001"
+      - "traefik.frontend.rule=Host:dashboard.localhost"
+      - "traefik.port=8080"
       - "traefik.backend=traefik"
-      - "traefik.frontend.auth.basic=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
 
 networks:
   web:

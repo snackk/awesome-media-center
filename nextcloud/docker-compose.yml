@@ -35,7 +35,7 @@ services:
     labels:
       - "traefik.docker.network=web"
       - "traefik.frontend.rule=Host:nextcloud.localhost"      
-      - "traefik.port=9001"
+      - "traefik.port=80"
       - "traefik.backend=nextcloud"
 
 networks:

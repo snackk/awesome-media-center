@@ -1,5 +1,8 @@
 version: '3'
 
+volumes:
+  emby:
+
 services:
   emby:
     image: emby/embyserver
@@ -8,9 +11,9 @@ services:
     networks:
       - web
     volumes:
-      - /home/snackk/emby/config:/config
-      - /home/snackk/Downloads/movies:/mnt/movies
-      - /home/snackk/Downloads/shows:/mnt/shows
+      - emby:/config
+      - /media/movies:/mnt/movies
+      - /media/shows:/mnt/shows
     devices:
       - /dev/dri/renderD128
     labels:
@@ -19,9 +22,8 @@ services:
       - "traefik.port=8096"
       - "traefik.backend=emby"  
     environment:
-      - "UID=1000" 
-      - "GID=100" 
-      - "GIDLIST=100" 
+      - UID: ${userid} 
+      - GID: ${groupid}
 
 networks:
   web:

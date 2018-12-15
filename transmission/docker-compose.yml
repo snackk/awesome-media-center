@@ -10,15 +10,16 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${PWD}/config:/config
-      - /home/snackk/Downloads:/downloads
+      - /media/movies:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.frontend.rule=Host:transmission.snackk-media.com"      
       - "traefik.port=9091"
       - "traefik.backend=transmission"
     environment:
-      - "PUID=1000"
-      - "PGID=100" 
+      - PUID: ${userid} 
+      - PGID: ${groupid}
+
 
 networks:
   web:

@@ -16,10 +16,10 @@ services:
     labels:
       - "traefik.enable=false"        
     environment:
-      - "MYSQL_ROOT_PASSWORD=secret"
-      - "MYSQL_PASSWORD="
-      - "MYSQL_DATABASE=nextcloud"
-      - "MYSQL_USER=nextcloud"    
+      - MYSQL_ROOT_PASSWORD: secret
+      - MYSQL_PASSWORD:
+      - MYSQL_DATABASE: nextcloud
+      - MYSQL_USER: nextcloud    
 
   nextcloud:
     image: nextcloud

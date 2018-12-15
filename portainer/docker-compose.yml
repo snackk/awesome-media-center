@@ -1,0 +1,47 @@
+version: '3'
+
+volumes:
+  portainer:
+
+services:
+  templates:
+    image: portainer/templates
+    container_name: templates
+    networks:
+      - internal
+    labels:
+      - "traefik.enable=false"         
+
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    restart: always
+    command: --templates http://templates/templates.json
+    networks:
+      - web
+      - internal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer:/data
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.frontend.rule=Host:portainer.snackk-media.com"     
+      - "traefik.port=9000"
+      - "traefik.backend=portainer"        
+
+  watchtower:
+    image: v2tec/watchtower
+    container_name: watchtower
+    command: --cleanup portainer watchtower templates
+    networks:
+      - internal
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    labels:
+      - "traefik.enable=false"         
+
+networks:
+  internal:
+    driver: bridge
+  web:
+    external: true    

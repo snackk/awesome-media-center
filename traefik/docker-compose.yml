@@ -18,11 +18,10 @@ services:
       - ${PWD}/acme.json:/acme.json
     labels:
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:dashboard.localhost"
+      - "traefik.frontend.rule=Host:dashboard.snackk-media.com"
       - "traefik.port=8080"
       - "traefik.backend=traefik"
 
 networks:
   web:
     external: true
-

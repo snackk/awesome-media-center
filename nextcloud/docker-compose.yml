@@ -13,15 +13,15 @@ services:
       - internal    
     volumes:
       - db:/var/lib/mysql
-    environment:
-      - MYSQL_ROOT_PASSWORD=secret
-      - MYSQL_PASSWORD=
-      - MYSQL_DATABASE=nextcloud
-      - MYSQL_USER=nextcloud
     labels:
-      - "traefik.enable=false"      
+      - "traefik.enable=false"        
+    environment:
+      - "MYSQL_ROOT_PASSWORD=secret"
+      - "MYSQL_PASSWORD="
+      - "MYSQL_DATABASE=nextcloud"
+      - "MYSQL_USER=nextcloud"    
 
-  app:
+  nextcloud:
     image: nextcloud
     container_name: nextcloud    
     restart: always
@@ -34,7 +34,7 @@ services:
       - db
     labels:
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:nextcloud.localhost"      
+      - "traefik.frontend.rule=Host:nextcloud.snackk-media.com"      
       - "traefik.port=80"
       - "traefik.backend=nextcloud"
 

@@ -12,8 +12,8 @@ services:
       - web
     volumes:
       - emby:/config
-      - /media/movies:/mnt/movies
-      - /media/shows:/mnt/shows
+      - /media/wdhdd/Media/Movies:/mnt/movies
+      - /media/wdhdd/Media/Shows:/mnt/shows
     devices:
       - /dev/dri/renderD128
     labels:
@@ -22,8 +22,8 @@ services:
       - "traefik.port=8096"
       - "traefik.backend=emby"  
     environment:
-      - UID: ${userid} 
-      - GID: ${groupid}
+      - UID: 1000 
+      - GID: 1000
 
 networks:
   web:

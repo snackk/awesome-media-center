@@ -10,7 +10,7 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - /media/wdhdd/Media/transmission_conf:/config
-      - /media/wdhdd/Media/Movies:/downloads
+      - /media/wdhdd/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.frontend.rule=Host:transmission.snackk-media.com"      

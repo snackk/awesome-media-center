@@ -1,5 +1,5 @@
 <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" alt="alt text">
-Media center using docker-compose with Traefik, Portainer, Nextcloud, Emby and Nextcloud.
+Media center using docker-compose with Traefik, Portainer, Nextcloud and Emby.
 
 ## Overview
 

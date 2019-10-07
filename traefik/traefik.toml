@@ -1,46 +1,47 @@
-debug = false
-logLevel = "ERROR"
-
-defaultEntryPoints = ["https", "http"]
+[global]
+  checkNewVersion = true
+  sendAnonymousUsage = false
 
 [entryPoints]
-    [entryPoints.http]
-    	address = ":80"
+  [entryPoints.dashboard]
+    address = ":8080"
+    [http.middlewares]
+      [http.middlewares.test-compress.compress]  
+  [entryPoints.http]
+    address = ":80"
+    [http.middlewares]
+      [http.middlewares.test-redirectscheme.redirectScheme]
+        scheme = "https"
+  [entryPoints.https]
+    address = ":443"
+    [http.middlewares]
+      [http.middlewares.test-compress.compress]  
+  [entryPoints.traefik]
+    [http.middlewares]
+      [http.middlewares.test-auth.basicAuth]
+        users = [
+          "snackk:$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/",
+        ]
 
-        [entryPoints.http.redirect]
-	        entryPoint = "https"
-	        permanent = true
-
-	[entryPoints.https]
-		address = ":443"
-		compress = true
-		[entryPoints.https.tls]
-
-	[entryPoints.dashboard]
-		address = ":8080"
-		compress = true
-
-		[entryPoints.traefik.auth.basic]
-		  users = ["snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"]    
-
-[retry]
+[providers]
+  providersThrottleDuration = "2s"
+  [providers.docker]
+    watch = true
+    endpoint = "unix:///var/run/docker.sock"
+    exposedByDefault = true
+    swarmModeRefreshSeconds = "15s"
 
 [api]
-	entryPoint = "dashboard"
-	dashboard = true
+  insecure = true
+  dashboard = true
 
-[docker]
-	endpoint = "unix:///var/run/docker.sock"
-	domain = "docker.localhost"
-	watch = true
-	exposedByDefault = true
+[log]
+  level = "ERROR"
 
-[acme]
-	email = "snackk026@gmail.com"
-	storage = "acme.json"
-	entryPoint = "https"
-	onHostRule = true
-
-	[acme.httpChallenge]
-		entryPoint = "http"
-
+[certificatesResolvers]
+  [certificatesResolvers.default]
+    [certificatesResolvers.default.acme]
+      email = "snackk026@gmail.com"
+      storage = "acme.json"
+      [certificatesResolvers.default.acme.httpChallenge]
+        entryPoint = "http"

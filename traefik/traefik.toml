@@ -5,17 +5,13 @@
 [entryPoints]
   [entryPoints.dashboard]
     address = ":8080"
-    [http.middlewares]
-      [http.middlewares.test-compress.compress]  
   [entryPoints.http]
     address = ":80"
     [http.middlewares]
-      [http.middlewares.test-redirectscheme.redirectScheme]
+      [http.middlewares.redirect-to-https.redirectScheme]
         scheme = "https"
   [entryPoints.https]
     address = ":443"
-    [http.middlewares]
-      [http.middlewares.test-compress.compress]  
   [entryPoints.traefik]
     [http.middlewares]
       [http.middlewares.test-auth.basicAuth]
@@ -43,5 +39,6 @@
     [certificatesResolvers.default.acme]
       email = "snackk026@gmail.com"
       storage = "acme.json"
+      #tlschallenge = true
       [certificatesResolvers.default.acme.httpChallenge]
         entryPoint = "http"

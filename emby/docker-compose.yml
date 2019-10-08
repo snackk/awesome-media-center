@@ -7,7 +7,7 @@ services:
   emby:
     image: emby/embyserver
     container_name: emby
-    restart: always  
+    restart: always
     networks:
       - web
     volumes:
@@ -18,11 +18,11 @@ services:
       - /dev/dri/renderD128
     labels:
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:emby.snackk-media.com"      
-      - "traefik.port=8096"
-      - "traefik.backend=emby"  
+      - "traefik.http.routers.emby.rule=Host(`emby.snackk-media.com`)"
+      - "traefik.http.services.emby.loadbalancer.server.port=8096"
+
     environment:
-      - UID: 1000 
+      - UID: 1000
       - GID: 1000
 
 networks:

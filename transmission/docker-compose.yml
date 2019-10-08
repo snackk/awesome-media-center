@@ -13,11 +13,10 @@ services:
       - /media/wdhdd/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:transmission.snackk-media.com"      
-      - "traefik.port=9091"
-      - "traefik.backend=transmission"
+      - "traefik.http.routers.transmission.rule=Host(`transmission.snackk-media.com`)"
+      - "traefik.http.services.transmission.loadbalancer.server.port=9091"
     environment:
-      - PUID: 1000 
+      - PUID: 1000
       - PGID: 1000
 
 networks:

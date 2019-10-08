@@ -3,7 +3,7 @@ Media center using docker-compose with Traefik, Portainer, Nextcloud and Emby.
 
 ## Overview
 
-Traefik acts as a reverse proxy to expose the running docker containers, exposes ports 80 and 443. Port 80 gets redirected to 443 to enforce HTTPS. Services are registered as dynamic DNS entries in the host machine, that maps a subdomain for the respective container. Each of the service has a config, using docker labels, to map on what port is the container running, so that Traefik can handle the routing to our containers. Addittionally, each service is SSL certified, managed by Traefik using Letsencrypt. 
+Traefik acts as a reverse proxy to expose the running docker containers, exposes ports 80 and 443. Port 80 gets redirected to 443 to enforce HTTPS. Services are registered as dynamic DNS entries in the host machine, that maps a subdomain for the respective container. Each of the service has a config, using docker labels, to map on what port is the container running, so that Traefik can handle the routing to our containers. Addittionally, each service is SSL certified, managed by Traefik using Letsencrypt.
 
 ## Prerequisites
 
@@ -50,15 +50,15 @@ The volumes should be changed to match the wanted mount. The *UID* and *GID* on 
 
 Should be deployed using portainer under stacks.
 
-The volumes should be changed to match the wanted mount. The *PUID* and *PGID* on the environment are described in the section [User ID and Group ID](#user). 
+The volumes should be changed to match the wanted mount. The *PUID* and *PGID* on the environment are described in the section [User ID and Group ID](#user).
 
 ### <a name="user"></a> User ID and Group ID
 
 With the user you're running docker run:
 ```sh
-$ id -u 
+$ id -u
 ```
-returns UID for the user, and 
+returns UID for the user, and
 ```sh
 $ id -g
 ```
@@ -66,9 +66,9 @@ returns GID for the user.
 
 ## <a name="problems"></a> Problems
 
-Permissions on *acme.json* are too open then run: 
+Permissions on *acme.json* are too open then run:
 ```sh
 $ chmod 600 acme.json
 ```
- 
+
   Written by [@snackk](https://github.com/snackk)

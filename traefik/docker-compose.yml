@@ -1,27 +1,62 @@
-version: '3'
+version: "3.7"
 
 services:
   traefik:
     image: traefik
     container_name: traefik
     restart: always
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker
+      - --api
+      - --certificatesresolvers.leresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+      - --certificatesresolvers.leresolver.acme.email=snackk026@gmail.com
+      - --certificatesresolvers.leresolver.acme.storage=/acme.json
+      - --certificatesresolvers.leresolver.acme.tlschallenge=true
     ports:
       - 80:80
       - 443:443
-    expose:
-      - 8080      
-    networks:
-      - web
+      # api.insecure dashboard - 8080:8080
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${PWD}/traefik.toml:/traefik.toml
-      - ${PWD}/acme.json:/acme.json
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./acme.json:/acme.json"
     labels:
+      # Dashboard
       - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:dashboard.snackk-media.com"
-      - "traefik.port=8080"
-      - "traefik.backend=traefik"
+      - "traefik.http.routers.traefik.rule=Host(`test.localhost`)"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+
+      # Dashboard Authentication
+      - "traefik.http.routers.traefik.middlewares=authtraefik"
+      - "traefik.http.middlewares.authtraefik.basicauth.users=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
+
+      # HTTPS redirect
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+      # WTF this
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls.certresolver=leresolver"
+      - "traefik.http.routers.traefik.entrypoints=websecure"
 
 networks:
   web:
     external: true
+
+
+
+
+#my-app:
+#  image: containous/whoami:v1.3.0
+#  labels:
+#    - "traefik.http.routers.my-app.rule=Host(`whoami.docker.localhost`)"
+#    - "traefik.http.routers.my-app.entrypoints=websecure"
+#    - "traefik.http.routers.my-app.tls=true"
+#    - "traefik.http.routers.my-app.tls.certresolver=leresolver"
+#
+#    #No need?
+#    - "traefik.http.routers.my-app.middlewares=auth"
+#    - "traefik.http.middlewares.auth.basicauth.users=user:$$apr1$$q8eZFHjF$$Fvmkk//V6Btlaf2i/ju5n/" # user/password

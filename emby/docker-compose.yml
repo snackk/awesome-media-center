@@ -1,4 +1,4 @@
-version: '3'
+version: "3.7"
 
 volumes:
   emby:
@@ -11,15 +11,19 @@ services:
     networks:
       - web
     volumes:
-      - emby:/config
-      - /media/wdhdd/Media/Movies:/mnt/movies
-      - /media/wdhdd/Media/Shows:/mnt/shows
+      - "emby:/config"
+      - "/media/wdhdd/Media/Movies:/mnt/movies"
+      - "/media/wdhdd/Media/Shows:/mnt/shows"
     devices:
       - /dev/dri/renderD128
     labels:
+      # Emby exposure
       - "traefik.docker.network=web"
+      - "traefik.http.routers.emby.entrypoints=websecure"
       - "traefik.http.routers.emby.rule=Host(`emby.snackk-media.com`)"
       - "traefik.http.services.emby.loadbalancer.server.port=8096"
+      - "traefik.http.routers.emby.tls=true"
+      - "traefik.http.routers.emby.tls.certresolver=leresolver"
 
     environment:
       - UID: 1000

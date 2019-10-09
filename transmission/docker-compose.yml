@@ -1,4 +1,4 @@
-version: '3'
+version: "3.7"
 
 services:
   transmission:
@@ -8,16 +8,20 @@ services:
     networks:
       - web
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /media/wdhdd/Media/transmission_conf:/config
-      - /media/wdhdd/Media/:/downloads
+      - "/etc/localtime:/etc/localtime:ro"
+      - "/media/wdhdd/Media/transmission_conf:/config"
+      - "/media/wdhdd/Media/:/downloads"
     labels:
+      # Transmission exposure
       - "traefik.docker.network=web"
+      - "traefik.http.routers.transmission.entrypoints=websecure"
       - "traefik.http.routers.transmission.rule=Host(`transmission.snackk-media.com`)"
       - "traefik.http.services.transmission.loadbalancer.server.port=9091"
+      - "traefik.http.routers.transmission.tls=true"
+      - "traefik.http.routers.transmission.tls.certresolver=leresolver"
     environment:
-      - PUID: 1000
-      - PGID: 1000
+      - "PUID: 1000"
+      - "PGID: 1000"
 
 networks:
   web:

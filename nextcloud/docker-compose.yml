@@ -1,4 +1,4 @@
-version: '3'
+version: "3.7"
 
 volumes:
   db:
@@ -29,13 +29,17 @@ services:
       - web
       - internal
     volumes:
-      - nextcloud:/var/www/html
+      - "nextcloud:/var/www/html"
     links:
       - db
     labels:
+      # Nextcloud exposure
       - "traefik.docker.network=web"
+      - "traefik.http.routers.nextcloud.entrypoints=websecure"
       - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.snackk-media.com`)"
       - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
+      - "traefik.http.routers.nextcloud.tls=true"
+      - "traefik.http.routers.nextcloud.tls.certresolver=leresolver"
 
 networks:
   internal:

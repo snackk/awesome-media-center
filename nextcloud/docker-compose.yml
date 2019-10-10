@@ -33,18 +33,20 @@ services:
     links:
       - db
     labels:
+      - "traefik.docker.network=web"
       - "traefik.enable=true"
       - "traefik.http.routers.nextcloud.entrypoints=http"
       - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.snackk-media.com`)"
       - "traefik.http.middlewares.nextcloud-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.nextcloud-https-redirect.redirectscheme.permanent=true"
       - "traefik.http.routers.nextcloud.middlewares=nextcloud-https-redirect"
+
       - "traefik.http.routers.nextcloud-secure.entrypoints=https"
       - "traefik.http.routers.nextcloud-secure.rule=Host(`nextcloud.snackk-media.com`)"
       - "traefik.http.routers.nextcloud-secure.tls=true"
-      - "traefik.http.routers.nextcloud-secure.tls.certresolver=http"
+      - "traefik.http.routers.nextcloud-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.nextcloud-secure.service=nextcloud"
-      - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-      - "traefik.docker.network=web"
+      - "traefik.http.services.nextcloud-secure.loadbalancer.server.port=80"
 
 networks:
   internal:

@@ -16,11 +16,9 @@ providers:
     filename: /config.yml
 
 certificatesResolvers:
-  http:
+  ssl-cert:
     acme:
       email: snackk026@gmail.com
       storage: acme.json
-      entryPoint: https
-      onHostRule: true
       httpChallenge:
         entryPoint: http

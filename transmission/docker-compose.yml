@@ -4,21 +4,26 @@ services:
   transmission:
     image: linuxserver/transmission
     container_name: transmission
-    restart: always
+    restart: unless-stoped
     networks:
       - web
     volumes:
-      - "/etc/localtime:/etc/localtime:ro"
-      - "/media/wdhdd/Media/transmission_conf:/config"
-      - "/media/wdhdd/Media/:/downloads"
+      - /etc/localtime:/etc/localtime:ro
+      - /media/wdhdd/Media/transmission_conf:/config
+      - /media/wdhdd/Media/:/downloads
     labels:
-      # Transmission exposure
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.transmission.entrypoints=websecure"
+      - "traefik.enable=true"
+      - "traefik.http.routers.transmission.entrypoints=http"
       - "traefik.http.routers.transmission.rule=Host(`transmission.snackk-media.com`)"
+      - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.transmission.middlewares=transmission-https-redirect"
+      - "traefik.http.routers.transmission-secure.entrypoints=https"
+      - "traefik.http.routers.transmission-secure.rule=Host(`transmission.snackk-media.com`)"
+      - "traefik.http.routers.transmission-secure.tls=true"
+      - "traefik.http.routers.transmission-secure.tls.certresolver=http"
+      - "traefik.http.routers.transmission-secure.service=transmission"
       - "traefik.http.services.transmission.loadbalancer.server.port=9091"
-      - "traefik.http.routers.transmission.tls=true"
-      - "traefik.http.routers.transmission.tls.certresolver=leresolver"
+      - "traefik.docker.network=web"
     environment:
       - "PUID: 1000"
       - "PGID: 1000"

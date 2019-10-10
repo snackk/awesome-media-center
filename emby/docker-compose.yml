@@ -7,27 +7,31 @@ services:
   emby:
     image: emby/embyserver
     container_name: emby
-    restart: always
+    restart: unless-stoped
     networks:
       - web
     volumes:
-      - "emby:/config"
-      - "/media/wdhdd/Media/Movies:/mnt/movies"
-      - "/media/wdhdd/Media/Shows:/mnt/shows"
+      - ./emby:/config"
+      - /media/wdhdd/Media/Movies:/mnt/movies
+      - /media/wdhdd/Media/Shows:/mnt/shows
     devices:
       - /dev/dri/renderD128
     labels:
-      # Emby exposure
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.emby.entrypoints=websecure"
+      - "traefik.enable=true"
+      - "traefik.http.routers.emby.entrypoints=http"
       - "traefik.http.routers.emby.rule=Host(`emby.snackk-media.com`)"
+      - "traefik.http.middlewares.emby-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.emby.middlewares=emby-https-redirect"
+      - "traefik.http.routers.emby-secure.entrypoints=https"
+      - "traefik.http.routers.emby-secure.rule=Host(`emby.snackk-media.com`)"
+      - "traefik.http.routers.emby-secure.tls=true"
+      - "traefik.http.routers.emby-secure.tls.certresolver=http"
+      - "traefik.http.routers.emby-secure.service=emby"
       - "traefik.http.services.emby.loadbalancer.server.port=8096"
-      - "traefik.http.routers.emby.tls=true"
-      - "traefik.http.routers.emby.tls.certresolver=leresolver"
-
+      - "traefik.docker.network=web"
     environment:
-      - UID: 1000
-      - GID: 1000
+      - "UID: 1000"
+      - "GID: 1000"
 
 networks:
   web:

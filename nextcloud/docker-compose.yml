@@ -24,22 +24,27 @@ services:
   nextcloud:
     image: nextcloud
     container_name: nextcloud
-    restart: always
+    restart: unless-stoped
     networks:
       - web
       - internal
     volumes:
-      - "nextcloud:/var/www/html"
+      - ./data:/var/www/html
     links:
       - db
     labels:
-      # Nextcloud exposure
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.nextcloud.entrypoints=websecure"
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextcloud.entrypoints=http"
       - "traefik.http.routers.nextcloud.rule=Host(`nextcloud.snackk-media.com`)"
+      - "traefik.http.middlewares.nextcloud-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.nextcloud.middlewares=nextcloud-https-redirect"
+      - "traefik.http.routers.nextcloud-secure.entrypoints=https"
+      - "traefik.http.routers.nextcloud-secure.rule=Host(`nextcloud.snackk-media.com`)"
+      - "traefik.http.routers.nextcloud-secure.tls=true"
+      - "traefik.http.routers.nextcloud-secure.tls.certresolver=http"
+      - "traefik.http.routers.nextcloud-secure.service=nextcloud"
       - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
-      - "traefik.http.routers.nextcloud.tls=true"
-      - "traefik.http.routers.nextcloud.tls.certresolver=leresolver"
+      - "traefik.docker.network=web"
 
 networks:
   internal:

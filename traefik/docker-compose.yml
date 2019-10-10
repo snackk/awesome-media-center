@@ -23,13 +23,13 @@ services:
       - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.permanent=true"
       - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
       - "traefik.http.routers.traefik-secure.entrypoints=https"
       - "traefik.http.routers.traefik-secure.rule=Host(`dashboard.snackk-media.com`)"
       - "traefik.http.routers.traefik-secure.tls=true"
       - "traefik.http.routers.traefik-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.traefik-secure.service=api@internal"
-      - "traefik.http.services.traefik-secure.loadbalancer.server.port=8080"
 
       - "traefik.http.middlewares.traefik-auth.basicauth.users=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
       - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"

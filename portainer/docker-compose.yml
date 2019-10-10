@@ -22,13 +22,13 @@ services:
       - "traefik.http.middlewares.portainer-https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.portainer-https-redirect.redirectscheme.permanent=true"
       - "traefik.http.routers.portainer.middlewares=portainer-https-redirect"
+      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
 
       - "traefik.http.routers.portainer-secure.entrypoints=https"
       - "traefik.http.routers.portainer-secure.rule=Host(`portainer.snackk-media.com`)"
       - "traefik.http.routers.portainer-secure.tls=true"
       - "traefik.http.routers.portainer-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.portainer-secure.service=portainer"
-      - "traefik.http.services.portainer-secure.loadbalancer.server.port=9000"
 
 networks:
   web:

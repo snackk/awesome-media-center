@@ -19,13 +19,13 @@ services:
       - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.scheme=https"
       - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.permanent=true"
       - "traefik.http.routers.transmission.middlewares=transmission-https-redirect"
+      - "traefik.http.services.transmission.loadbalancer.server.port=9091"
 
       - "traefik.http.routers.transmission-secure.entrypoints=https"
       - "traefik.http.routers.transmission-secure.rule=Host(`transmission.snackk-media.com`)"
       - "traefik.http.routers.transmission-secure.tls=true"
       - "traefik.http.routers.transmission-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.transmission-secure.service=transmission"
-      - "traefik.http.services.transmission-secure.loadbalancer.server.port=9091"
     environment:
       - "PUID: 1000"
       - "PGID: 1000"

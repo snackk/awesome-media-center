@@ -1,26 +1,38 @@
-version: '3'
+version: "3.7"
 
 services:
   traefik:
     image: traefik
     container_name: traefik
-    restart: always
+    restart: unless-stopped
+    networks:
+      - web
     ports:
       - 80:80
       - 443:443
-    expose:
-      - 8080      
-    networks:
-      - web
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ${PWD}/traefik.toml:/traefik.toml
-      - ${PWD}/acme.json:/acme.json
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik.yml:/traefik.yml:ro
+      - ./data/acme.json:/acme.json
+      - ./data/config.yml:/config.yml:ro
     labels:
-      - "traefik.docker.network=web"
-      - "traefik.frontend.rule=Host:dashboard.snackk-media.com"
-      - "traefik.port=8080"
-      - "traefik.backend=traefik"
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=http"
+      - "traefik.http.routers.traefik.rule=Host(`dashboard.snackk-media.com`)"
+      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
+
+      - "traefik.http.routers.traefik-secure.entrypoints=https"
+      - "traefik.http.routers.traefik-secure.rule=Host(`dashboard.snackk-media.com`)"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=ssl-cert"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+      - "traefik.http.services.traefik-secure.loadbalancer.server.port=8080"
+
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
+      - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
 
 networks:
   web:

@@ -11,7 +11,7 @@ services:
     networks:
       - web
     volumes:
-      - ./emby:/config"
+      - emby:/config
       - /media/wdhdd/Media/Movies:/mnt/movies
       - /media/wdhdd/Media/Shows:/mnt/shows
     devices:
@@ -32,8 +32,8 @@ services:
       - "traefik.http.routers.emby-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.emby-secure.service=emby"
     environment:
-      - "UID: 1000"
-      - "GID: 1000"
+      - "UID=1000"
+      - "GID=1000"
 
 networks:
   web:

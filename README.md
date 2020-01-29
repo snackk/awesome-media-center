@@ -1,6 +1,7 @@
 ## awesome-media-center
-
-<img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" alt="alt text">
+<p align="center">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" alt="alt text">
+</p>
 Media center using docker-compose with Traefik, Portainer, Nextcloud and Emby.
 
 ## Overview

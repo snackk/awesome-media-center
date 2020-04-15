@@ -2,12 +2,14 @@ version: '3.7'
 
 volumes:
   emby:
+    external: true
+    name: emby
 
 services:
   emby:
     image: emby/embyserver
     container_name: emby
-    restart: unless-stoped
+    restart: unless-stopped
     networks:
       - web
     volumes:

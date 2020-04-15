@@ -4,7 +4,7 @@ services:
   transmission:
     image: linuxserver/transmission
     container_name: transmission
-    restart: unless-stoped
+    restart: unless-stopped
     networks:
       - web
     volumes:
@@ -27,8 +27,8 @@ services:
       - "traefik.http.routers.transmission-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.transmission-secure.service=transmission"
     environment:
-      - "PUID=1000"
-      - "PGID=1000"
+      - "PUID: 1000"
+      - "PGID: 1000"
 
 networks:
   web:

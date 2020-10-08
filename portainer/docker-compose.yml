@@ -5,7 +5,7 @@ volumes:
 
 services:
   portainer:
-    image: portainer/portainer
+    image: portainer/portainer-ce
     container_name: portainer
     restart: unless-stopped
     networks:

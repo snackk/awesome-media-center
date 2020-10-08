@@ -16,8 +16,8 @@ services:
       - emby:/config
       - /media/wdhdd/Media/Movies:/mnt/movies
       - /media/wdhdd/Media/Shows:/mnt/shows
-    devices:
-      - /dev/dri/renderD128
+    #devices:
+      #- /dev/dri/renderD128
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"

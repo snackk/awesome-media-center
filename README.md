@@ -55,7 +55,7 @@ Should be deployed using portainer under stacks.
 #### Portainer upgrade
 
 ```sh
-$ docker pull portainer/portainer
+$ docker pull portainer/portainer-ce
 $ cd portainer
 $ docker stop portainer
 $ docker rm portainer 

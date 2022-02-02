@@ -41,7 +41,7 @@ On the *docker-compose.yml* one should change the property *basicauth.users*. Th
 #### Traefik upgrade
 
 ```sh
-$ docker pull traefik/traefik
+$ docker pull traefik
 $ cd traefik
 $ docker stop traefik
 $ docker rm traefik 

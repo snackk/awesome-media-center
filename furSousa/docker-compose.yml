@@ -34,6 +34,18 @@ services:
       - "SPRING_DATASOURCE_URL=jdbc:mysql://fursousa-mysql:3306/fursousa?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true"
       - "SPRING_LIQUIBASE_URL=jdbc:mysql://fursousa-mysql:3306/fursousa?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true"
       - "JHIPSTER_SLEEP=60"
+      - "JHIPSTER_MAIL_FROM=MAIL@hotmail.com"
+      - "JHIPSTER_MAIL_BASE-URL=https://fur-sousa.snackk-media.com"
+      - "SPRING_MAIL_HOST=smtp-mail.outlook.com"
+      - "SPRING_MAIL_PORT=587"
+      - "SPRING_MAIL_USERNAME=MAIL@hotmail.com"
+      - "SPRING_MAIL_PASSWORD=PASS"
+      - "SPRING_MAIL_PROTOCOL=smtp"
+      - "SPRING_MAIL_TLS=true"
+      - "SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH=true"
+      - "SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE=true"
+      - "SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=smtp-mail.outlook.com"
+
 
   fursousa-mysql:
     image: mysql:8.0.30
@@ -41,8 +53,6 @@ services:
     restart: unless-stopped
     networks:
       - web
-    # volumes:
-    #   - ~/volumes/jhipster/furSousa/mysql/:/var/lib/mysql/
     volumes:
       - fursousa-data:/etc/mysql/conf.d
       - fursousa-data:/var/lib/mysql/

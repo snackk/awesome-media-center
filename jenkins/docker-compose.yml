@@ -1,0 +1,37 @@
+version: '3.7'
+
+volumes:
+  jenkins:
+    external: true
+    name: jenkins
+
+services:
+  jenkins:
+    image: snackk/jenkins
+    restart: unless-stopped
+    privileged: true
+    container_name: jenkins
+    networks:
+      - web
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.http.routers.jenkins.entrypoints=http"
+      - "traefik.http.routers.jenkins.rule=Host(`jenkins.snackk-media.com`)"
+      - "traefik.http.middlewares.jenkins-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.jenkins-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.jenkins.middlewares=jenkins-https-redirect"
+      - "traefik.http.services.jenkins.loadbalancer.server.port=8080"
+
+      - "traefik.http.routers.jenkins-secure.entrypoints=https"
+      - "traefik.http.routers.jenkins-secure.rule=Host(`jenkins.snackk-media.com`)"
+      - "traefik.http.routers.jenkins-secure.tls=true"
+      - "traefik.http.routers.jenkins-secure.tls.certresolver=ssl-cert"
+      - "traefik.http.routers.jenkins-secure.service=jenkins"
+    volumes:
+      - "jenkins:/var/jenkins_home"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+networks:
+  web:
+    external: true

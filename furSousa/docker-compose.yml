@@ -1,0 +1,56 @@
+version: '3.7'
+
+volumes:
+  fursousa-data:
+    external: true
+    name: fursousa-data
+
+services:
+  fursousa-app:
+    image: snackk/fursousa
+    container_name: fursousa-app
+    restart: unless-stopped
+    networks:
+      - web
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.http.routers.fur-sousa.entrypoints=http"
+      - "traefik.http.routers.fur-sousa.rule=Host(`fur-sousa.snackk-media.com`)"
+      - "traefik.http.middlewares.fur-sousa-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.fur-sousa-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.fur-sousa.middlewares=fur-sousa-https-redirect"
+      - "traefik.http.services.fur-sousa.loadbalancer.server.port=8080"
+
+      - "traefik.http.routers.fur-sousa-secure.entrypoints=https"
+      - "traefik.http.routers.fur-sousa-secure.rule=Host(`fur-sousa.snackk-media.com`)"
+      - "traefik.http.routers.fur-sousa-secure.tls=true"
+      - "traefik.http.routers.fur-sousa-secure.tls.certresolver=ssl-cert"
+      - "traefik.http.routers.fur-sousa-secure.service=fur-sousa"
+    environment:
+      - "_JAVA_OPTIONS=-Xmx512m -Xms256m"
+      - "SPRING_PROFILES_ACTIVE=prod,api-docs"
+      - "MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED=true"
+      - "SPRING_DATASOURCE_URL=jdbc:mysql://fursousa-mysql:3306/fursousa?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true"
+      - "SPRING_LIQUIBASE_URL=jdbc:mysql://fursousa-mysql:3306/fursousa?useUnicode=true&characterEncoding=utf8&useSSL=false&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true"
+      - "JHIPSTER_SLEEP=60"
+
+  fursousa-mysql:
+    image: mysql:8.0.30
+    container_name: fursousa-mysql
+    restart: unless-stopped
+    networks:
+      - web
+    # volumes:
+    #   - ~/volumes/jhipster/furSousa/mysql/:/var/lib/mysql/
+    volumes:
+      - fursousa-data:/etc/mysql/conf.d
+      - fursousa-data:/var/lib/mysql/
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=fursousa
+    command: mysqld --lower_case_table_names=1 --skip-ssl --character_set_server=utf8mb4 --explicit_defaults_for_timestamp
+
+networks:
+  web:
+    external: true

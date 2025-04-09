@@ -14,8 +14,12 @@ services:
       - web
     volumes:
       - emby:/config
-      - /media/wdhdd/Media/Movies:/mnt/movies
-      - /media/wdhdd/Media/Shows:/mnt/shows
+      # linux
+      #      - /media/wdhdd/Media/Movies:/mnt/movies
+      #      - /media/wdhdd/Media/Shows:/mnt/shows
+      # macOs
+      - /Volumes/Media/Media/Movies:/mnt/movies
+      - /Volumes/Media/Media/Shows:/mnt/shows
     #devices:
       #- /dev/dri/renderD128
     labels:
@@ -34,8 +38,8 @@ services:
       - "traefik.http.routers.emby-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.emby-secure.service=emby"
     environment:
-      - "UID=1000"
-      - "GID=1000"
+      - "UID=501"
+      - "GID=20"
 
 networks:
   web:

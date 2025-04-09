@@ -12,25 +12,23 @@ Traefik acts as a reverse proxy to expose the running docker containers, exposes
 
 * Domain, with the subdomains registered
 * Server
-* Docker and docker-compose
+* Docker and docker compose
 
 ## Installation
 
 Each of the services is represented by a docker stack, containing a *docker-compose.yml*. For the installation to be more manageable, the only two service deployed by docker cli are [traefik](#traefik) and [portainer](#portainer). The remaining services will be deployed using [portainer](#portainer) to easily manage the stacks.
 
-First, run trafik:
+First, run trafik - traefik will expose all internal services that enable traefik in their configs:
 ```sh
-$ cd trafik
-$ docker-compose pull && docker-compose up -d
+$ cd trafik && docker compose up -d
 ```
 
 Next, run the portainer:
 ```sh
-$ cd portainer
-$ docker-compose pull && docker-compose up -d
+$ cd portainer && docker compose up -d
 ```
 
-Now, that portainer is already up and running, we just add the stacks on portainer dashboard, by adding each of the docker-compose files.
+With portainer up and running, we can either add the stacks on portainer dashboard, by adding each of the docker-compose files, or by repeating the docker compose up on each of the services.
 
 Any issue with the installation should refer to the [problems](#problems) section.
 
@@ -40,17 +38,18 @@ On the *docker-compose.yml* one should change the property *basicauth.users*. Th
 
 #### Traefik upgrade
 
+Traefik is not managed by portainer, so we can't recreate the stack and pull the latest image, so we need to do it manually: 
 ```sh
 $ docker pull traefik
 $ cd traefik
 $ docker stop traefik
 $ docker rm traefik 
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 ### <a name="portainer"></a> Portainer
 
-Should be deployed using portainer under stacks.
+Like Traefik, not managed by itself, so we need to manually recreate and pull the latest image:
 
 #### Portainer upgrade
 
@@ -59,7 +58,7 @@ $ docker pull portainer/portainer-ce
 $ cd portainer
 $ docker stop portainer
 $ docker rm portainer 
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 ### Nextcloud
@@ -88,7 +87,7 @@ $ docker-compose up -d
 
 Should be deployed using portainer under stacks.
 
-The volumes should be changed to match the wanted mount. The *UID* and *GID* on the environment are described in the section [User ID and Group ID](#user). 
+The *UID* and *GID* on the environment are described in the section [User ID and Group ID](#user). 
 
 #### Emby upgrade
 
@@ -99,22 +98,33 @@ $ docker pull emby/emby
 $ cd emby
 $ docker stop emby
 $ docker rm emby 
-$ docker-compose up -d
+$ docker compose up -d
 ```
 
 #### Emby Backup
 
-This command will backup the config folder from emby, mounted as an external volume, and create a backup.tar file in your home folder. 
+This step is recommended when changing the OS of the host machine / changing hardware parts.
+This will backup the entire emby config and create a **backup.tar** file.
 ```sh
-$ cd ~
+$ cd ~ && mkdir emby-backup && cd emby-backup
 $ docker run --rm --volumes-from emby -v $(pwd):/backup ubuntu tar cvf /backup/backup.tar /config
 ```
 
 #### Emby Restore Backup
 
-On a new container from the same host machine or a different host, you can recreate the same volume as backup by the previous command.
+If you're using colima, please read through this first: [Additional config - Colima](#colima).
+
+For Colima:
+
+Additionally, you need to copy the generated emby-backup folder to `~/colima-data`.
 ```sh
-$ cd ~
+$ docker run --rm --volumes-from emby -v ~/colima-data/emby-backup:/backup ubuntu bash -c \
+  "cd /config && tar xvf /backup/backup.tar --strip 1 && chown -R 501:20 /config"
+```
+
+Here, you should make sure you've copied the emby-backup to the new host machine, and cd into it:
+```
+$ cd ~/Desktop/emby-backup
 $ docker run --rm --volumes-from emby -v $(pwd):/backup ubuntu bash -c "cd /config && tar xvf /backup/backup.tar --strip 1"
 ```
 
@@ -133,7 +143,25 @@ $ docker pull transmission/transmission
 $ cd transmission
 $ docker stop transmission
 $ docker rm transmission 
-$ docker-compose up -d
+$ docker compose up -d
+```
+
+### <a name="colima"></a> Additional config - Colima
+
+Because Colima doesn't automatically mount the host volumes, we need to manually add them to the VM config of Colima in order to use them.
+To do that, you should add mount points to the Colima VM template:
+```
+subl ~/.colima/default/colima.yaml
+```
+A folder should also exist on your home folder (`mkdir ~/colima-data`).
+
+example:
+```
+mounts:
+  - location: /Volumes/Media
+    writable: true
+  - location: ~/colima-data
+    writab
 ```
 
 ### <a name="user"></a> User ID and Group ID

@@ -1,0 +1,38 @@
+### macOS ###
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+### IntelliJ ###
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+*.sw?
+
+### Docker ###
+# General
+.env
+docker-compose.override.yml
+**/data/
+**/volumes/
+
+# Sensitive files
+*.key
+*.pem
+*.cert
+
+# Development artifacts
+docker-compose.*.yml  # Alternate compose files (except main)
+**/build/
+**/dist/
+
+### Project-specific ###
+node_modules/
+*.log
+logs/
+tmp/
+
+portainer/portainer/

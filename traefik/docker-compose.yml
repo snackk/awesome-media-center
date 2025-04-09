@@ -11,11 +11,16 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./data/traefik.yml:/traefik.yml:ro
-      - ./data/acme.json:/acme.json
-      - ./data/config.yml:/config.yml:ro
+      # linux
+      #      - ./data/traefik.yml:/traefik.yml:ro
+      #      - ./data/acme.json:/acme.json
+      #      - ./data/config.yml:/config.yml:ro
+      # macOs
+      - ~/colima-data/traefik/traefik.yml:/traefik.yml:ro
+      - ~/colima-data/traefik/acme.json:/acme.json
+      - ~/colima-data/traefik/config.yml:/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # No change needed
+
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.entrypoints=http"

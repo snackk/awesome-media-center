@@ -14,11 +14,11 @@ services:
       - web
     volumes:
       # linux
-      #      - /media/wdhdd/Media/transmission_conf:/config
-      #      - /media/wdhdd/Media/:/downloads
+      - /media/data/Media/transmission_conf:/config
+      - /media/data/Media/:/downloads
       # macOs
-      - /Volumes/Media/Media/transmission_conf:/config
-      - /Volumes/Media/Media/:/downloads
+      #- /Volumes/Media/Media/transmission_conf:/config
+      #- /Volumes/Media/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -47,13 +47,13 @@ services:
     volumes:
       - emby:/config
       # linux
-      #      - /media/wdhdd/Media/Movies:/mnt/movies
-      #      - /media/wdhdd/Media/Shows:/mnt/shows
+      - /media/data/Media/Movies:/mnt/movies
+      - /media/data/Media/Shows:/mnt/shows
       # macOs
-      - /Volumes/Media/Media/Movies:/mnt/movies
-      - /Volumes/Media/Media/Shows:/mnt/shows
-    #devices:
-      #- /dev/dri/renderD128
+      #- /Volumes/Media/Media/Movies:/mnt/movies
+      #- /Volumes/Media/Media/Shows:/mnt/shows
+    devices:
+      - /dev/dri/renderD128
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -81,9 +81,9 @@ services:
     networks:
       - web
     volumes:
-      - /Volumes/Media/Media/radarr_config:/config
-      - /Volumes/Media/Media/Movies:/movies
-      - /Volumes/Media/Media/Downloads:/downloads
+      - /media/data/Media/radarr_config:/config
+      - /media/data/Media/Movies:/movies
+      - /media/data/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -109,9 +109,9 @@ services:
     networks:
       - web
     volumes:
-      - /Volumes/Media/Media/sonarr_config:/config
-      - /Volumes/Media/Media/Shows:/tv
-      - /Volumes/Media/Media/Downloads:/downloads
+      - /media/data/Media/sonarr_config:/config
+      - /media/data/Media/Shows:/tv
+      - /media/data/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -139,8 +139,8 @@ services:
     ports:
       - "9117:9117"  # Jackett web UI port
     volumes:
-      - /Volumes/Media/Media/jackett_config:/config
-      - /Volumes/Media/Media/Downloads:/downloads
+      - /media/data/Media/jackett_config:/config
+      - /media/data/Media/:/downloads
     environment:
       - "PUID=501"
       - "PGID=20"

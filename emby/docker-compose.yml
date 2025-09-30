@@ -136,8 +136,6 @@ services:
     restart: unless-stopped
     networks:
       - web
-    ports:
-      - "9117:9117"  # Jackett web UI port
     volumes:
       - /media/data/Media/jackett_config:/config
       - /media/data/Media/:/downloads

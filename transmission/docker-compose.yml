@@ -9,11 +9,11 @@ services:
       - web
     volumes:
       # linux
-      #      - /media/wdhdd/Media/transmission_conf:/config
-      #      - /media/wdhdd/Media/:/downloads
+      - /media/data/Media/transmission_conf:/config
+      - /media/data/Media/:/downloads
       # macOs
-      - /Volumes/Media/Media/transmission_conf:/config
-      - /Volumes/Media/Media/:/downloads
+      #- /Volumes/Media/Media/transmission_conf:/config
+      #- /Volumes/Media/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -30,9 +30,10 @@ services:
       - "traefik.http.routers.transmission-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.transmission-secure.service=transmission"
     environment:
-      - "PUID=501"
-      - "PGID=20"
+      - "PUID=1000"
+      - "PGID=1000"
 
 networks:
   web:
     external: true
+

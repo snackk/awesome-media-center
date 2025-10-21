@@ -15,13 +15,13 @@ services:
     volumes:
       - emby:/config
       # linux
-      #      - /media/wdhdd/Media/Movies:/mnt/movies
-      #      - /media/wdhdd/Media/Shows:/mnt/shows
+      - /media/data/Media/Movies:/mnt/movies
+      - /media/data/Media/Shows:/mnt/shows
       # macOs
-      - /Volumes/Media/Media/Movies:/mnt/movies
-      - /Volumes/Media/Media/Shows:/mnt/shows
-    #devices:
-      #- /dev/dri/renderD128
+      #- /Volumes/Media/Media/Movies:/mnt/movies
+      #- /Volumes/Media/Media/Shows:/mnt/shows
+    devices:
+      - /dev/dri/renderD128
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -38,8 +38,103 @@ services:
       - "traefik.http.routers.emby-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.emby-secure.service=emby"
     environment:
-      - "UID=501"
-      - "GID=20"
+      - "UID=1000"
+      - "GID=1000"
+      - "TZ=Europe/Lisbon"
+
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - /media/data/Media/radarr_config:/config
+      - /media/data/Media/Movies:/movies
+      - /media/data/Media/:/downloads
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.http.routers.radarr.entrypoints=http"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.snackk-media.com`)"
+      - "traefik.http.middlewares.radarr-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.radarr-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.radarr.middlewares=radarr-https-redirect"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+      - "traefik.http.routers.radarr-secure.entrypoints=https"
+      - "traefik.http.routers.radarr-secure.rule=Host(`radarr.snackk-media.com`)"
+      - "traefik.http.routers.radarr-secure.tls=true"
+      - "traefik.http.routers.radarr-secure.tls.certresolver=ssl-cert"
+      - "traefik.http.routers.radarr-secure.service=radarr"
+    environment:
+      - "PUID=1000"
+      - "PGID=1000"
+
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - /media/data/Media/sonarr_config:/config
+      - /media/data/Media/Shows:/tv
+      - /media/data/Media/:/downloads
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.http.routers.sonarr.entrypoints=http"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.snackk-media.com`)"
+      - "traefik.http.middlewares.sonarr-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.sonarr-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.sonarr.middlewares=sonarr-https-redirect"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+      - "traefik.http.routers.sonarr-secure.entrypoints=https"
+      - "traefik.http.routers.sonarr-secure.rule=Host(`sonarr.snackk-media.com`)"
+      - "traefik.http.routers.sonarr-secure.tls=true"
+      - "traefik.http.routers.sonarr-secure.tls.certresolver=ssl-cert"
+      - "traefik.http.routers.sonarr-secure.service=sonarr"
+    environment:
+      - "PUID=1000"
+      - "PGID=1000"
+
+  jackett:
+    image: linuxserver/jackett
+    container_name: jackett
+    restart: unless-stopped
+    networks:
+      - web
+    volumes:
+      - /media/data/Media/jackett_config:/config
+      - /media/data/Media/:/downloads
+    environment:
+      - "PUID=1000"
+      - "PGID=1000"
+    labels:
+      - "traefik.docker.network=web"
+      - "traefik.enable=true"
+      - "traefik.http.routers.jackett.entrypoints=http"
+      - "traefik.http.routers.jackett.rule=Host(`jackett.snackk-media.com`)"
+      - "traefik.http.middlewares.jackett-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.jackett-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.jackett.middlewares=jackett-https-redirect"
+      - "traefik.http.services.jackett.loadbalancer.server.port=9117"
+      - "traefik.http.routers.jackett-secure.entrypoints=https"
+      - "traefik.http.routers.jackett-secure.rule=Host(`jackett.snackk-media.com`)"
+      - "traefik.http.routers.jackett-secure.tls=true"
+      - "traefik.http.routers.jackett-secure.tls.certresolver=ssl-cert"
+      - "traefik.http.routers.jackett-secure.service=jackett"
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    networks:
+      - web
+    ports:
+      - "8191:8191"
+    environment:
+      - LOG_LEVEL=info
 
 networks:
   web:

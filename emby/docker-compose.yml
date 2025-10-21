@@ -6,38 +6,6 @@ volumes:
     name: emby
 
 services:
-  transmission:
-    image: linuxserver/transmission
-    container_name: transmission
-    restart: unless-stopped
-    networks:
-      - web
-    volumes:
-      # linux
-      - /media/data/Media/transmission_conf:/config
-      - /media/data/Media/:/downloads
-      # macOs
-      #- /Volumes/Media/Media/transmission_conf:/config
-      #- /Volumes/Media/Media/:/downloads
-    labels:
-      - "traefik.docker.network=web"
-      - "traefik.enable=true"
-      - "traefik.http.routers.transmission.entrypoints=http"
-      - "traefik.http.routers.transmission.rule=Host(`transmission.snackk-media.com`)"
-      - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.permanent=true"
-      - "traefik.http.routers.transmission.middlewares=transmission-https-redirect"
-      - "traefik.http.services.transmission.loadbalancer.server.port=9091"
-
-      - "traefik.http.routers.transmission-secure.entrypoints=https"
-      - "traefik.http.routers.transmission-secure.rule=Host(`transmission.snackk-media.com`)"
-      - "traefik.http.routers.transmission-secure.tls=true"
-      - "traefik.http.routers.transmission-secure.tls.certresolver=ssl-cert"
-      - "traefik.http.routers.transmission-secure.service=transmission"
-    environment:
-      - "PUID=501"
-      - "PGID=20"
-
   emby:
     image: emby/embyserver
     container_name: emby
@@ -70,8 +38,8 @@ services:
       - "traefik.http.routers.emby-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.emby-secure.service=emby"
     environment:
-      - "UID=501"
-      - "GID=20"
+      - "UID=1000"
+      - "GID=1000"
       - "TZ=Europe/Lisbon"
 
   radarr:
@@ -99,8 +67,8 @@ services:
       - "traefik.http.routers.radarr-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.radarr-secure.service=radarr"
     environment:
-      - "PUID=501"
-      - "PGID=20"
+      - "PUID=1000"
+      - "PGID=1000"
 
   sonarr:
     image: linuxserver/sonarr
@@ -127,8 +95,8 @@ services:
       - "traefik.http.routers.sonarr-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.sonarr-secure.service=sonarr"
     environment:
-      - "PUID=501"
-      - "PGID=20"
+      - "PUID=1000"
+      - "PGID=1000"
 
   jackett:
     image: linuxserver/jackett
@@ -140,8 +108,8 @@ services:
       - /media/data/Media/jackett_config:/config
       - /media/data/Media/:/downloads
     environment:
-      - "PUID=501"
-      - "PGID=20"
+      - "PUID=1000"
+      - "PGID=1000"
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"
@@ -156,6 +124,17 @@ services:
       - "traefik.http.routers.jackett-secure.tls=true"
       - "traefik.http.routers.jackett-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.jackett-secure.service=jackett"
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    restart: unless-stopped
+    networks:
+      - web
+    ports:
+      - "8191:8191"
+    environment:
+      - LOG_LEVEL=info
 
 networks:
   web:

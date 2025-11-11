@@ -13,9 +13,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro  # No change needed
       # linux
-      #      - ./portainer:/data
+      - ./portainer:/data
       # macOs
-      - ~/colima-data/portainer:/data
+      #- ~/colima-data/portainer:/data
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"

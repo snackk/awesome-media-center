@@ -5,6 +5,8 @@ services:
     image: rogerfar/rdtclient:latest
     container_name: debrid
     restart: unless-stopped
+    ports:
+      - "6500:6500"
     networks:
       - web
     environment:

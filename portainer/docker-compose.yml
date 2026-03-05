@@ -8,6 +8,8 @@ services:
     image: portainer/portainer-ce
     container_name: portainer
     restart: unless-stopped
+    ports:
+      - "9443:9443"
     networks:
       - web
     volumes:

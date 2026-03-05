@@ -10,6 +10,8 @@ services:
     image: emby/embyserver
     container_name: emby
     restart: unless-stopped
+    ports:
+      - "8096:8096"    
     networks:
       - web
     volumes:

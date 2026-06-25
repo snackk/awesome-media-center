@@ -1,5 +1,3 @@
-version: '3.7'
-
 volumes:
   emby:
     external: true
@@ -16,12 +14,8 @@ services:
       - web
     volumes:
       - emby:/config
-      # linux
       - /media/data/Media/Movies:/mnt/movies
       - /media/data/Media/Shows:/mnt/shows
-      # macOs
-      #- /Volumes/Media/Media/Movies:/mnt/movies
-      #- /Volumes/Media/Media/Shows:/mnt/shows
     devices:
       - /dev/dri:/dev/dri
     group_add:
@@ -129,6 +123,7 @@ services:
       - "traefik.http.middlewares.jackett-https-redirect.redirectscheme.permanent=true"
       - "traefik.http.routers.jackett.middlewares=jackett-https-redirect"
       - "traefik.http.services.jackett.loadbalancer.server.port=9117"
+
       - "traefik.http.routers.jackett-secure.entrypoints=https"
       - "traefik.http.routers.jackett-secure.rule=Host(`jackett.snackk-media.com`)"
       - "traefik.http.routers.jackett-secure.tls=true"

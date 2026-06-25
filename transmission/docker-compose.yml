@@ -1,5 +1,3 @@
-version: '3.7'
-
 services:
   transmission:
     image: linuxserver/transmission
@@ -10,12 +8,8 @@ services:
     networks:
       - web
     volumes:
-      # linux
       - /media/data/Media/transmission_conf:/config
       - /media/data/Media/:/downloads
-      # macOs
-      #- /Volumes/Media/Media/transmission_conf:/config
-      #- /Volumes/Media/Media/:/downloads
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"

@@ -5,6 +5,8 @@ services:
     image: linuxserver/transmission
     container_name: transmission
     restart: unless-stopped
+    ports:
+      - "9091:9091"
     networks:
       - web
     volumes:

@@ -9,7 +9,7 @@ services:
     container_name: portainer
     restart: unless-stopped
     ports:
-      - "9443:9443"
+      - "9000:9000"
     networks:
       - web
     volumes:

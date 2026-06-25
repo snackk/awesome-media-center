@@ -1,7 +1,3 @@
-version: '3.7'
-
-volumes:
-  portainer:
 
 services:
   portainer:
@@ -9,15 +5,12 @@ services:
     container_name: portainer
     restart: unless-stopped
     ports:
-      - "9443:9443"
+      - "9000:9000"
     networks:
       - web
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro  # No change needed
-      # linux
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./portainer:/data
-      # macOs
-      #- ~/colima-data/portainer:/data
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"

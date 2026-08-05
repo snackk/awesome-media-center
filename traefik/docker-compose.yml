@@ -6,8 +6,8 @@ services:
     networks:
       - web
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     volumes:
       - ./data/traefik.yml:/traefik.yml:ro
       - ./data/acme.json:/acme.json

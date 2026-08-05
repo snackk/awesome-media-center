@@ -8,10 +8,11 @@ services:
     networks:
       - web
     environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/London
+      - "PUID=1000"
+      - "PGID=1000"
+      - "TZ=Europe/London"
     volumes:
+      - /media/data/Media/debrid_config:/data/db
       - /media/data/Media/:/data/downloads
     labels:
       - "traefik.docker.network=web"
@@ -28,6 +29,16 @@ services:
       - "traefik.http.routers.debrid-secure.tls=true"
       - "traefik.http.routers.debrid-secure.tls.certresolver=ssl-cert"
       - "traefik.http.routers.debrid-secure.service=debrid"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:6500/ || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 30s
+      retries: 3
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   web:

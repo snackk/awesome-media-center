@@ -12,6 +12,7 @@ services:
       - "PGID=1000"
       - "TZ=Europe/London"
     volumes:
+      - /media/data/Media/debrid_config:/data/db
       - /media/data/Media/:/data/downloads
     labels:
       - "traefik.docker.network=web"

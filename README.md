@@ -65,6 +65,15 @@ Media server for movies and TV shows. The stack also includes:
 
 The `UID` and `GID` environment variables should match your user. See [User ID and Group ID](#user).
 
+The `group_add` entries in `emby/docker-compose.yml` (`992`, `44`) are the host GIDs for the `render` and `video` groups, used for hardware transcoding via `/dev/dri`. These GIDs are **not guaranteed to be the same across installations or hardware** — they depend on your distro and driver setup. Check your host's actual GIDs before deploying:
+
+```sh
+getent group render
+getent group video
+```
+
+Update the `group_add` values in the compose file to match if they differ.
+
 ### Debrid
 
 Real-Debrid download client ([RDTClient](https://github.com/rogerfar/rdt-client)).

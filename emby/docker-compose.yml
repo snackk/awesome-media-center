@@ -39,20 +39,30 @@ services:
       - "UID=1000"
       - "GID=1000"
       - "TZ=Europe/Lisbon"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:8096/System/Ping || exit 1
+      start_period: 30s
+      timeout: 3s
+      interval: 30s
+      retries: 3
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   seerr:
     image: ghcr.io/seerr-team/seerr
     container_name: seerr
     restart: unless-stopped
     ports:
-      - 5055:5055
+      - "5055:5055"
     networks:
       - web
     volumes:
       - /media/data/Media/seerr_config:/app/config
     environment:
-      - LOG_LEVEL=info
-      - TZ=Europe/Lisbon
+      - "LOG_LEVEL=info"
+      - "TZ=Europe/Lisbon"
     labels:
       - "traefik.docker.network=web"
       - "traefik.enable=true"

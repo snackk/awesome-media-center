@@ -1,0 +1,120 @@
+x-common: &common
+  restart: unless-stopped
+  networks:
+    - web
+  logging:
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-lsio-env: &lsio-env
+  PUID: ${PUID:-1000}
+  PGID: ${PGID:-1000}
+  TZ: ${TZ:-Europe/Lisbon}
+
+# Services are only reachable through Traefik (no published ports).
+services:
+  radarr:
+    <<: *common
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    environment: *lsio-env
+    volumes:
+      - ${CONFIG_ROOT:-/mnt/pool/config}/radarr:/config
+      # One mount for media + downloads => hardlinks / atomic moves
+      - ${DATA_ROOT:-/mnt/pool}:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.radarr.entrypoints=https"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.radarr.middlewares=secure-headers@file"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
+    healthcheck:
+      test: curl -fsS http://localhost:7878/ping || exit 1
+      start_period: 30s
+      timeout: 5s
+      interval: 30s
+      retries: 3
+
+  sonarr:
+    <<: *common
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    environment: *lsio-env
+    volumes:
+      - ${CONFIG_ROOT:-/mnt/pool/config}/sonarr:/config
+      - ${DATA_ROOT:-/mnt/pool}:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.sonarr.entrypoints=https"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.sonarr.middlewares=secure-headers@file"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
+    healthcheck:
+      test: curl -fsS http://localhost:8989/ping || exit 1
+      start_period: 30s
+      timeout: 5s
+      interval: 30s
+      retries: 3
+
+  prowlarr:
+    <<: *common
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    environment: *lsio-env
+    volumes:
+      - ${CONFIG_ROOT:-/mnt/pool/config}/prowlarr:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.prowlarr.entrypoints=https"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.prowlarr.middlewares=secure-headers@file"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
+    healthcheck:
+      test: curl -fsS http://localhost:9696/ping || exit 1
+      start_period: 30s
+      timeout: 5s
+      interval: 30s
+      retries: 3
+
+  # Internal only: used by Prowlarr (http://flaresolverr:8191). Not exposed via Traefik.
+  flaresolverr:
+    <<: *common
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      LOG_LEVEL: info
+      TZ: ${TZ:-Europe/Lisbon}
+    labels:
+      - "traefik.enable=false"
+
+  seerr:
+    <<: *common
+    image: ghcr.io/seerr-team/seerr:latest
+    container_name: seerr
+    environment:
+      LOG_LEVEL: info
+      TZ: ${TZ:-Europe/Lisbon}
+    volumes:
+      - ${CONFIG_ROOT:-/mnt/pool/config}/seerr:/app/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.seerr.entrypoints=https"
+      - "traefik.http.routers.seerr.rule=Host(`seerr.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.seerr.middlewares=secure-headers@file"
+      - "traefik.http.services.seerr.loadbalancer.server.port=5055"
+    healthcheck:
+      test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
+      start_period: 20s
+      timeout: 3s
+      interval: 15s
+      retries: 3
+
+networks:
+  web:
+    external: true
+

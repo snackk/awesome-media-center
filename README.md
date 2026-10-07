@@ -102,29 +102,22 @@ This pulls the latest images and recreates only the containers that have changed
 
 ## Emby Backup & Restore
 
+The Emby config is a bind mount at `${CONFIG_ROOT}/emby` (default `/mnt/pool/config/emby`).
+
 ### Backup
 
-This backs up the entire Emby config volume into a `backup.tar` file:
-
 ```sh
-cd ~ && mkdir -p emby-backup && cd emby-backup
-docker run --rm --volumes-from emby -v $(pwd):/backup ubuntu tar cvf /backup/backup.tar /config
+(cd emby && docker compose stop)
+tar czf emby-backup.tar.gz -C /mnt/pool/config/emby .
+(cd emby && docker compose start)
 ```
 
 ### Restore
 
 ```sh
-cd ~/emby-backup
-docker run --rm --volumes-from emby -v $(pwd):/backup ubuntu bash -c "cd /config && tar xvf /backup/backup.tar --strip 1"
-```
-
-#### Restore with Colima
-
-If using [Colima](#colima), copy the `emby-backup` folder to `~/colima-data` first:
-
-```sh
-docker run --rm --volumes-from emby -v ~/colima-data/emby-backup:/backup ubuntu bash -c \
-  "cd /config && tar xvf /backup/backup.tar --strip 1 && chown -R 501:20 /config"
+mkdir -p /mnt/pool/config/emby
+tar xzf emby-backup.tar.gz -C /mnt/pool/config/emby
+chown -R 1000:1000 /mnt/pool/config/emby
 ```
 
 ## <a name="colima"></a> Additional Config — Colima

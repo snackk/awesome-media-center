@@ -2,16 +2,33 @@ api:
   dashboard: true
   debug: false
 
+ping: {}
+
+log:
+  level: INFO
+
 entryPoints:
   http:
     address: ":80"
+    http:
+      # Global HTTP -> HTTPS redirect: services only need an https router
+      redirections:
+        entryPoint:
+          to: https
+          scheme: https
+          permanent: true
   https:
     address: ":443"
+    http:
+      # TLS + certificate resolver for every router on this entrypoint
+      tls:
+        certResolver: ssl-cert
 
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
+    network: web
   file:
     filename: /config.yml
 
@@ -22,3 +39,4 @@ certificatesResolvers:
       storage: acme.json
       httpChallenge:
         entryPoint: http
+

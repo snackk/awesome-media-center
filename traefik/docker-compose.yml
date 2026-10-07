@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik
+    image: traefik:v3
     container_name: traefik
     restart: unless-stopped
     networks:
@@ -13,25 +13,28 @@ services:
       - ./data/acme.json:/acme.json
       - ./data/config.yml:/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.entrypoints=http"
-      - "traefik.http.routers.traefik.rule=Host(`dashboard.snackk-media.com`)"
-      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.permanent=true"
-      - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-
-      - "traefik.http.routers.traefik-secure.entrypoints=https"
-      - "traefik.http.routers.traefik-secure.rule=Host(`dashboard.snackk-media.com`)"
-      - "traefik.http.routers.traefik-secure.tls=true"
-      - "traefik.http.routers.traefik-secure.tls.certresolver=ssl-cert"
-      - "traefik.http.routers.traefik-secure.service=api@internal"
-
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.traefik.entrypoints=https"
+      - "traefik.http.routers.traefik.rule=Host(`dashboard.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      # Dashboard is protected by basic auth (generate with htpasswd, escape $ as $$)
       - "traefik.http.middlewares.traefik-auth.basicauth.users=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
-      - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+      - "traefik.http.routers.traefik.middlewares=traefik-auth,secure-headers@file"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   web:
     external: true
+

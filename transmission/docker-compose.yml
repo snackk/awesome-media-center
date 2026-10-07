@@ -1,33 +1,28 @@
 services:
   transmission:
-    image: linuxserver/transmission
+    image: lscr.io/linuxserver/transmission:latest
     container_name: transmission
     restart: unless-stopped
     ports:
-      - "9091:9091"
+      # BitTorrent peer port must be reachable from the Internet (forward it on the router)
+      - "51413:51413"
+      - "51413:51413/udp"
     networks:
       - web
     volumes:
-      - /media/data/Media/transmission_conf:/config
-      - /media/data/Media/:/downloads
-    labels:
-      - "traefik.docker.network=web"
-      - "traefik.enable=true"
-      - "traefik.http.routers.transmission.entrypoints=http"
-      - "traefik.http.routers.transmission.rule=Host(`transmission.snackk-media.com`)"
-      - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.transmission-https-redirect.redirectscheme.permanent=true"
-      - "traefik.http.routers.transmission.middlewares=transmission-https-redirect"
-      - "traefik.http.services.transmission.loadbalancer.server.port=9091"
-
-      - "traefik.http.routers.transmission-secure.entrypoints=https"
-      - "traefik.http.routers.transmission-secure.rule=Host(`transmission.snackk-media.com`)"
-      - "traefik.http.routers.transmission-secure.tls=true"
-      - "traefik.http.routers.transmission-secure.tls.certresolver=ssl-cert"
-      - "traefik.http.routers.transmission-secure.service=transmission"
+      - ${CONFIG_ROOT:-/mnt/pool/config}/transmission:/config
+      - ${DATA_ROOT:-/mnt/pool}/downloads:/downloads
     environment:
-      - "PUID=1000"
-      - "PGID=1000"
+      - "PUID=${PUID:-1000}"
+      - "PGID=${PGID:-1000}"
+      - "TZ=${TZ:-Europe/Lisbon}"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.transmission.entrypoints=https"
+      - "traefik.http.routers.transmission.rule=Host(`transmission.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.transmission.middlewares=secure-headers@file"
+      - "traefik.http.services.transmission.loadbalancer.server.port=9091"
     logging:
       options:
         max-size: "10m"
@@ -36,3 +31,4 @@ services:
 networks:
   web:
     external: true
+

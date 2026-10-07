@@ -3,32 +3,22 @@ services:
     image: rogerfar/rdtclient:latest
     container_name: debrid
     restart: unless-stopped
-    ports:
-      - "6500:6500"
     networks:
       - web
     environment:
-      - "PUID=1000"
-      - "PGID=1000"
-      - "TZ=Europe/London"
+      - "PUID=${PUID:-1000}"
+      - "PGID=${PGID:-1000}"
+      - "TZ=${TZ:-Europe/Lisbon}"
     volumes:
-      - /media/data/Media/debrid_config:/data/db
-      - /media/data/Media/:/data/downloads
+      - ${CONFIG_ROOT:-/mnt/pool/config}/debrid:/data/db
+      - ${DATA_ROOT:-/mnt/pool}/downloads:/data/downloads
     labels:
-      - "traefik.docker.network=web"
       - "traefik.enable=true"
-      - "traefik.http.routers.debrid.entrypoints=http"
-      - "traefik.http.routers.debrid.rule=Host(`debrid.snackk-media.com`)"
-      - "traefik.http.middlewares.debrid-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.debrid-https-redirect.redirectscheme.permanent=true"
-      - "traefik.http.routers.debrid.middlewares=debrid-https-redirect"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.debrid.entrypoints=https"
+      - "traefik.http.routers.debrid.rule=Host(`debrid.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.debrid.middlewares=secure-headers@file"
       - "traefik.http.services.debrid.loadbalancer.server.port=6500"
-
-      - "traefik.http.routers.debrid-secure.entrypoints=https"
-      - "traefik.http.routers.debrid-secure.rule=Host(`debrid.snackk-media.com`)"
-      - "traefik.http.routers.debrid-secure.tls=true"
-      - "traefik.http.routers.debrid-secure.tls.certresolver=ssl-cert"
-      - "traefik.http.routers.debrid-secure.service=debrid"
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:6500/ || exit 1
       start_period: 20s
@@ -43,3 +33,4 @@ services:
 networks:
   web:
     external: true
+

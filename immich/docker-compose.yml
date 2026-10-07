@@ -1,0 +1,103 @@
+x-immich-env: &immich-env
+  TZ: ${TZ:-Europe/Lisbon}
+  DB_HOSTNAME: immich_postgres
+  DB_USERNAME: postgres
+  DB_PASSWORD: ${IMMICH_DB_PASSWORD:?Set IMMICH_DB_PASSWORD in .env}
+  DB_DATABASE_NAME: immich
+  REDIS_HOSTNAME: immich_redis
+
+# Only immich-server is attached to the Traefik network (web).
+# Postgres, Redis and machine-learning stay on the private "immich" network.
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    container_name: immich_server
+    restart: unless-stopped
+    networks:
+      - web
+      - immich
+    environment: *immich-env
+    volumes:
+      # Photo/video library
+      - ${DATA_ROOT:-/mnt/pool}/media/Photos:/data
+      - /etc/localtime:/etc/localtime:ro
+    depends_on:
+      immich-redis:
+        condition: service_healthy
+      immich-postgres:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.immich.entrypoints=https"
+      - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.immich.middlewares=secure-headers@file"
+      - "traefik.http.services.immich.loadbalancer.server.port=2283"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:2283/api/server/ping || exit 1"]
+      start_period: 60s
+      timeout: 5s
+      interval: 30s
+      retries: 3
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    container_name: immich_machine_learning
+    restart: unless-stopped
+    networks:
+      - immich
+    environment:
+      TZ: ${TZ:-Europe/Lisbon}
+    volumes:
+      - ${CONFIG_ROOT:-/mnt/pool/config}/immich/model-cache:/cache
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  immich-redis:
+    image: docker.io/valkey/valkey:8-bookworm
+    container_name: immich_redis
+    restart: unless-stopped
+    networks:
+      - immich
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  immich-postgres:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich_postgres
+    restart: unless-stopped
+    networks:
+      - immich
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD:?Set IMMICH_DB_PASSWORD in .env}
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      # Database must live on a local disk (never a network share)
+      - ${CONFIG_ROOT:-/mnt/pool/config}/immich/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d immich"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  web:
+    external: true
+  immich:
+

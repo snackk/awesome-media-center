@@ -13,6 +13,9 @@ services:
       - ./data/acme.json:/acme.json
       - ./data/config.yml:/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
+    extra_hosts:
+      # Lets Traefik reach services running with network_mode: host (homecontrol)
+      - "host.docker.internal:host-gateway"
     security_opt:
       - no-new-privileges:true
     healthcheck:

@@ -4,11 +4,24 @@
   <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" alt="Docker Logo">
 </p>
 
-Media center using Docker Compose with Traefik, Portainer, Emby, Radarr, Sonarr, Jackett, FlareSolverr, Debrid, Transmission, and Jenkins.
+Media center using Docker Compose with Traefik, Portainer, Emby, Radarr, Sonarr, Prowlarr, FlareSolverr, Seerr, Debrid, Transmission, Immich, Navidrome, and HomeControl.
 
 ## Overview
 
-Traefik acts as a reverse proxy to expose the running Docker containers, listening on ports 80 and 443. Port 80 redirects all requests to 443 to enforce HTTPS. Each service is registered via Docker labels and automatically gets an SSL certificate managed by Traefik using Let's Encrypt.
+Traefik acts as a reverse proxy to expose the running Docker containers, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. A shared `secure-headers` middleware (`traefik/data/config.yml`) is applied to every router.
+
+See [docs/MIGRATION-UGREEN-DXP2800.md](docs/MIGRATION-UGREEN-DXP2800.md) for the NAS setup (ext4 + MergerFS, Intellipark) and the migration guide.
+
+### Storage layout and configuration
+
+Paths default to a pool mounted at `/mnt/pool` (`media/`, `downloads/`, `config/`). Media and downloads share one filesystem, mounted as `/data` in Radarr/Sonarr to allow hardlinks. Override defaults with a `.env` (see `.env.example`):
+
+```sh
+cp .env.example .env
+for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol; do ln -sf ../.env "$d/.env"; done
+```
+
+Create the shared network once: `docker network create web`.
 
 ## Prerequisites
 
@@ -56,23 +69,28 @@ Web-based Docker management UI.
 
 ### Emby
 
-Media server for movies and TV shows. The stack also includes:
+Media server for movies and TV shows (`emby/`). Only Emby lives in this stack, so it can be upgraded or restarted without touching the automation tools.
 
-- **Radarr** — Movie collection manager
-- **Sonarr** — TV series collection manager
-- **Jackett** — Torrent indexer proxy
-- **FlareSolverr** — Cloudflare bypass proxy for Jackett
+`PUID`/`PGID` should match your user. See [User ID and Group ID](#user).
 
-The `UID` and `GID` environment variables should match your user. See [User ID and Group ID](#user).
-
-The `group_add` entries in `emby/docker-compose.yml` (`992`, `44`) are the host GIDs for the `render` and `video` groups, used for hardware transcoding via `/dev/dri`. These GIDs are **not guaranteed to be the same across installations or hardware** — they depend on your distro and driver setup. Check your host's actual GIDs before deploying:
+Hardware transcoding uses `/dev/dri` with the host `render` and `video` GIDs (`RENDER_GID`/`VIDEO_GID`, defaults `992`/`44`). These are **not guaranteed to be the same across installations** — check them before deploying:
 
 ```sh
 getent group render
 getent group video
 ```
 
-Update the `group_add` values in the compose file to match if they differ.
+### Arr (Radarr, Sonarr, Prowlarr, FlareSolverr, Seerr)
+
+Media automation stack (`arr/`):
+
+- **Radarr** — Movie collection manager
+- **Sonarr** — TV series collection manager
+- **Prowlarr** — Indexer manager
+- **FlareSolverr** — Cloudflare bypass proxy for Prowlarr (internal only, not exposed)
+- **Seerr** — Media request UI
+
+These services are only reachable through Traefik (no published ports).
 
 ### Debrid
 
@@ -82,11 +100,21 @@ See `debrid/README.md` for post-installation configuration.
 
 ### Transmission
 
-BitTorrent client. The volumes should be changed to match your desired download path. The `PUID` and `PGID` environment variables are described in [User ID and Group ID](#user).
+BitTorrent client. Downloads go to `${DATA_ROOT}/downloads`. The `PUID` and `PGID` environment variables are described in [User ID and Group ID](#user).
 
-### Jenkins
+### Navidrome
 
-CI/CD server with Docker-in-Docker support and JDK 21. Uses a custom image built from `jenkins/Dockerfile`.
+Music streaming server (`navidrome/`), compatible with Subsonic clients. Library: `${DATA_ROOT}/media/music` (mounted read-only); database/cache: `${CONFIG_ROOT}/navidrome`.
+
+### HomeControl
+
+Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so it can resolve `.local` (mDNS) ESPHome/Shelly devices through the host's `avahi-daemon`, which must be installed and running on the NAS. Because it is not on the `web` network, Traefik reaches it through a file-provider route in `traefik/data/config.yml` (`host.docker.internal:8080`); the hostname there is hardcoded (`homecontrol.snackk-media.com`), so edit it if you change `DOMAIN`. Port 8080 is also reachable directly on the host LAN. Set `HC_USERNAME`, `HC_PASSWORD` and `HC_API_KEY` in `.env` and place the SSH key at `${SSH_KEY_PATH}` (default `/mnt/pool/config/homecontrol/ssh/id_rsa`, readable by the container user).
+
+### Immich
+
+Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/media/Photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).
+
+Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits only). Then create the admin account at `https://immich.snackk-media.com`.
 
 ## Upgrading Services
 

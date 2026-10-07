@@ -32,7 +32,9 @@ Everything media-related lives under one MergerFS pool, mounted at `/mnt/pool`. 
 /mnt/pool                   <- MergerFS union of /mnt/disks/disk*
 ├── media/
 │   ├── movies/             (was /media/data/Media/Movies)
-│   └── shows/              (was /media/data/Media/Shows)
+│   ├── shows/              (was /media/data/Media/Shows)
+│   ├── music/              (Navidrome library, was ~/Music on the Raspberry Pi)
+│   └── Photos/             (Immich library)
 ├── downloads/              (was the root of /media/data/Media, torrent/debrid downloads)
 └── config/                 (application configuration, was *_config folders and docker volumes)
     ├── emby/
@@ -42,7 +44,11 @@ Everything media-related lives under one MergerFS pool, mounted at `/mnt/pool`. 
     ├── seerr/
     ├── transmission/
     ├── debrid/
-    ├── jenkins/
+    ├── immich/
+    ├── navidrome/
+    ├── homecontrol/
+    │   ├── state/
+    │   └── ssh/
     └── portainer/
 ```
 
@@ -207,7 +213,7 @@ MergerFS presents several disks as a single directory. Files are stored whole on
 5. Create the folder structure and permissions (use the UID/GID of the user that will run the containers, normally `1000:1000`; check with `id`):
 
    ```sh
-   mkdir -p /mnt/pool/{media/{movies,shows},downloads,config}
+   mkdir -p /mnt/pool/{media/{movies,shows,music,Photos},downloads,config}
    chown -R 1000:1000 /mnt/pool
    ```
 
@@ -230,7 +236,7 @@ MergerFS presents several disks as a single directory. Files are stored whole on
 2. Because of `category.create=epmfs`, new files only land on a disk that already contains the parent directory. Create the base folders on the new disk so it is used:
 
    ```sh
-   mkdir -p /mnt/disks/disk2/{media/{movies,shows},downloads}
+   mkdir -p /mnt/disks/disk2/{media/{movies,shows,music,Photos},downloads}
    chown -R 1000:1000 /mnt/disks/disk2
    ```
 
@@ -274,7 +280,7 @@ MergerFS presents several disks as a single directory. Files are stored whole on
    cp .env.example .env
    nano .env
    # Make the file available to every stack
-   for d in traefik portainer emby arr transmission debrid jenkins; do ln -sf ../.env "$d/.env"; done
+   for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol; do ln -sf ../.env "$d/.env"; done
    ```
 
 5. Check the host GIDs used for hardware transcoding (Intel iGPU via `/dev/dri`) and set `RENDER_GID`/`VIDEO_GID` in `.env` if they differ from `992`/`44`:
@@ -297,21 +303,19 @@ OLD=/media/data/Media        # media root on the old computer
 
 ```sh
 cd ~/awesome-media-center
-for d in jenkins debrid transmission arr emby portainer traefik; do (cd $d 2>/dev/null && docker compose down); done
+for d in debrid transmission arr emby portainer traefik; do (cd $d 2>/dev/null && docker compose down); done
 # Old layout: everything was inside the emby/ stack
 (cd emby && docker compose down)
 ```
 
-### 8.2. Export Docker named volumes (Emby and Jenkins)
+### 8.2. Export the Emby Docker named volume
 
-The old configuration used named volumes. Export them to tarballs:
+The old configuration used a named volume. Export it to a tarball:
 
 ```sh
 mkdir -p ~/migration && cd ~/migration
-for v in emby jenkins; do
-  docker run --rm -v $v:/source:ro -v "$PWD":/backup alpine \
-    tar czf /backup/$v.tar.gz -C /source .
-done
+docker run --rm -v emby:/source:ro -v "$PWD":/backup alpine \
+  tar czf /backup/emby.tar.gz -C /source .
 ```
 
 ### 8.3. Copy the media and downloads
@@ -342,16 +346,15 @@ rsync -aHh $OLD/transmission_conf/   $NAS:/mnt/pool/config/transmission/
 rsync -aHh $OLD/debrid_config/       $NAS:/mnt/pool/config/debrid/
 rsync -aHh ~/awesome-media-center/portainer/portainer/ $NAS:/mnt/pool/config/portainer/
 
-# Named volumes exported in 8.2
-scp ~/migration/emby.tar.gz ~/migration/jenkins.tar.gz $NAS:/tmp/
+# Named volume exported in 8.2
+scp ~/migration/emby.tar.gz $NAS:/tmp/
 ```
 
-On the **NAS**, extract the volumes into the new bind-mount folders:
+On the **NAS**, extract the volume into the new bind-mount folder:
 
 ```sh
-mkdir -p /mnt/pool/config/{emby,jenkins}
-tar xzf /tmp/emby.tar.gz    -C /mnt/pool/config/emby
-tar xzf /tmp/jenkins.tar.gz -C /mnt/pool/config/jenkins
+mkdir -p /mnt/pool/config/emby
+tar xzf /tmp/emby.tar.gz -C /mnt/pool/config/emby
 chown -R 1000:1000 /mnt/pool/config
 ```
 
@@ -369,11 +372,52 @@ chmod 600 ~/awesome-media-center/traefik/data/acme.json
 
 > The repository version of the compose/config files is already adapted to the new layout; pull the latest changes on the NAS instead of copying the old files.
 
+### 8.6. Migrate the Raspberry Pi 3 services (Navidrome and HomeControl)
+
+Run from the **Raspberry Pi**, in the folder where the old `docker-compose.yml` lives (e.g. `~/Downloads`). Set `NAS=<user>@<nas-ip>` first.
+
+1. Stop the services so the databases are consistent:
+
+   ```sh
+   docker compose down
+   ```
+
+2. Music library and Navidrome data (its database references tracks as `/music/...`, which stays the same inside the container, so no re-scan of paths is needed):
+
+   ```sh
+   rsync -aHh --info=progress2 --partial /home/snackk/Music/ $NAS:/mnt/pool/media/music/
+   rsync -aHh ./navidrome/ $NAS:/mnt/pool/config/navidrome/
+   ```
+
+3. HomeControl state (named volume `homecontrol-state`) and SSH key:
+
+   ```sh
+   docker run --rm -v homecontrol-state:/source:ro -v "$PWD":/backup alpine \
+     tar czf /backup/homecontrol-state.tar.gz -C /source .
+   scp homecontrol-state.tar.gz $NAS:/tmp/
+   ssh $NAS 'mkdir -p /mnt/pool/config/homecontrol/{state,ssh}'
+   scp ~/.ssh/id_rsa $NAS:/mnt/pool/config/homecontrol/ssh/id_rsa
+   ```
+
+4. On the **NAS**:
+
+   ```sh
+   tar xzf /tmp/homecontrol-state.tar.gz -C /mnt/pool/config/homecontrol/state
+   chmod 600 /mnt/pool/config/homecontrol/ssh/id_rsa
+   chown -R 1000:1000 /mnt/pool/config/navidrome /mnt/pool/config/homecontrol /mnt/pool/media/music
+   # HomeControl runs as an unknown UID inside the container: if the state or the key is
+   # not readable, check `docker logs homecontrol` and adjust ownership accordingly.
+   ```
+
+5. Create `.env` with `HC_USERNAME`, `HC_PASSWORD`, `HC_API_KEY` (and the optional Netatmo variables) copied from the Pi.
+6. **Architecture check:** the Raspberry Pi 3 is `arm`/`arm64`, the NAS is `amd64`. `deluan/navidrome` is multi-arch, but `snackk/homecontrol:latest` must be published for `linux/amd64`, otherwise rebuild/push it with `docker buildx build --platform linux/amd64,linux/arm64 ...`.
+7. HomeControl needs `avahi-daemon` on the NAS: `apt install -y avahi-daemon`, and the host firewall must allow the Docker bridge to reach port 8080 so Traefik can proxy to it.
+
 ## 9. Network, DNS and port forwarding
 
 1. Give the NAS a fixed IP (DHCP reservation).
 2. On the router, change the port forwards for **80** and **443** from the old computer to the NAS IP. Also forward **51413 TCP/UDP** to the NAS (Transmission peer port).
-3. DNS records for `*.snackk-media.com` (emby, seerr, radarr, sonarr, prowlarr, transmission, debrid, jenkins, portainer, dashboard) do not need to change if the public IP stays the same. If you use dynamic DNS, make sure the updater runs on the NAS (or on the router) from now on.
+3. DNS records for `*.snackk-media.com` (emby, seerr, radarr, sonarr, prowlarr, transmission, debrid, immich, navidrome, homecontrol, portainer, dashboard) do not need to change if the public IP stays the same. If you use dynamic DNS, make sure the updater runs on the NAS (or on the router) from now on.
 4. Make sure the old computer no longer listens on 80/443 (stopped in step 8.1).
 
 ## 10. Start the stacks
@@ -389,7 +433,9 @@ cd ~/awesome-media-center
 (cd transmission && docker compose up -d)
 (cd debrid       && docker compose up -d)
 (cd arr          && docker compose up -d)
-(cd jenkins      && docker compose up -d --build)
+(cd immich       && docker compose up -d)   # requires IMMICH_DB_PASSWORD in .env
+(cd navidrome    && docker compose up -d)
+(cd homecontrol  && docker compose up -d)   # requires HC_* variables in .env
 ```
 
 Check status and logs:

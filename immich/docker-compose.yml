@@ -1,5 +1,5 @@
 x-immich-env: &immich-env
-  TZ: ${TZ:-Europe/Lisbon}
+  TZ: ${TZ:?Set TZ in .env}
   DB_HOSTNAME: immich_postgres
   DB_USERNAME: postgres
   DB_PASSWORD: ${IMMICH_DB_PASSWORD:?Set IMMICH_DB_PASSWORD in .env}
@@ -10,7 +10,7 @@ x-immich-env: &immich-env
 # Postgres, Redis and machine-learning stay on the private "immich" network.
 services:
   immich-server:
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:?Set IMMICH_VERSION in .env}
     container_name: immich_server
     restart: unless-stopped
     networks:
@@ -19,7 +19,7 @@ services:
     environment: *immich-env
     volumes:
       # Photo/video library
-      - ${DATA_ROOT:-/mnt/pool}/media/Photos:/data
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/media/Photos:/data
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       immich-redis:
@@ -30,7 +30,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=web"
       - "traefik.http.routers.immich.entrypoints=https"
-      - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN:?Set DOMAIN in .env}`)"
       - "traefik.http.routers.immich.middlewares=secure-headers@file"
       - "traefik.http.services.immich.loadbalancer.server.port=2283"
     healthcheck:
@@ -45,15 +45,15 @@ services:
         max-file: "3"
 
   immich-machine-learning:
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:?Set IMMICH_VERSION in .env}
     container_name: immich_machine_learning
     restart: unless-stopped
     networks:
       - immich
     environment:
-      TZ: ${TZ:-Europe/Lisbon}
+      TZ: ${TZ:?Set TZ in .env}
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/immich/model-cache:/cache
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/immich/model-cache:/cache
     logging:
       options:
         max-size: "10m"
@@ -84,7 +84,7 @@ services:
       POSTGRES_INITDB_ARGS: "--data-checksums"
     volumes:
       # Database must live on a local disk (never a network share)
-      - ${CONFIG_ROOT:-/mnt/pool/config}/immich/postgres:/var/lib/postgresql/data
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/immich/postgres:/var/lib/postgresql/data
     shm_size: 128mb
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d immich"]

@@ -3,28 +3,25 @@ services:
     image: emby/embyserver:latest
     container_name: emby
     restart: unless-stopped
-    ports:
-      # Direct LAN access for TVs/clients; everything else goes through Traefik
-      - "8096:8096"
     networks:
       - web
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/emby:/config
-      - ${DATA_ROOT:-/mnt/pool}/media:/data/media
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/emby:/config
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/media:/data/media
     devices:
       - /dev/dri:/dev/dri
     group_add:
-      - "${RENDER_GID:-992}"
-      - "${VIDEO_GID:-44}"
+      - "${RENDER_GID:?Set RENDER_GID in .env}"
+      - "${VIDEO_GID:?Set VIDEO_GID in .env}"
     environment:
-      - "UID=${PUID:-1000}"
-      - "GID=${PGID:-1000}"
-      - "TZ=${TZ:-Europe/Lisbon}"
+      - "UID=${PUID:?Set PUID in .env}"
+      - "GID=${PGID:?Set PGID in .env}"
+      - "TZ=${TZ:?Set TZ in .env}"
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"
       - "traefik.http.routers.emby.entrypoints=https"
-      - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN:?Set DOMAIN in .env}`)"
       - "traefik.http.routers.emby.middlewares=secure-headers@file"
       - "traefik.http.services.emby.loadbalancer.server.port=8096"
     healthcheck:

@@ -4,24 +4,36 @@
   <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" alt="Docker Logo">
 </p>
 
-Media center using Docker Compose with Traefik, Portainer, Emby, Radarr, Sonarr, Prowlarr, FlareSolverr, Seerr, Debrid, Transmission, Immich, Navidrome, and HomeControl.
+Media center using Docker Compose with Traefik, Portainer, Emby, Radarr, Sonarr, Prowlarr, Profilarr, FlareSolverr, Seerr, Debrid, Transmission, Immich, Navidrome, HomeControl, and Tailscale.
 
 ## Overview
 
-Traefik acts as a reverse proxy to expose the running Docker containers, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. A shared `secure-headers` middleware (`traefik/data/config.yml`) is applied to every router.
+Traefik acts as a reverse proxy for the **user-facing** services only, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each exposed service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. A shared `secure-headers` middleware (`traefik/data/config.yml`) is applied to every router.
+
+### What is exposed
+
+| Exposure | Services |
+| --- | --- |
+| **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl |
+| **Internet, router port forward** | `80`, `443` (Traefik), `51413` TCP/UDP (Transmission peers) |
+| **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
+| **Localhost only (SSH tunnel / Tailscale)** | Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik dashboard `8082` |
+| **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning |
+
+Admin tools never go through Traefik. Access them with an SSH tunnel, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas` and open `http://localhost:9000`, from the LAN or over Tailscale.
 
 See [docs/MIGRATION-UGREEN-DXP2800.md](docs/MIGRATION-UGREEN-DXP2800.md) for the NAS setup (ext4 + MergerFS, Intellipark) and the migration guide.
 
 ### Storage layout and configuration
 
-Paths default to a pool mounted at `/mnt/pool` (`media/`, `downloads/`, `config/`). Media and downloads share one filesystem, mounted as `/data` in Radarr/Sonarr to allow hardlinks. Override defaults with a `.env` (see `.env.example`):
+Everything lives in a pool mounted at `/mnt/pool` (`media/`, `downloads/`, `config/`). Media and downloads share one filesystem, mounted as `/data` in Radarr/Sonarr to allow hardlinks. All settings come from a single `.env` (see `.env.example`). **There are no defaults in the compose files**: a missing variable makes `docker compose` fail with an explicit message.
 
 ```sh
 cp .env.example .env
-for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol; do ln -sf ../.env "$d/.env"; done
+for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
 ```
 
-Create the shared network once: `docker network create web`.
+Create the shared networks once: `docker network create web` (Traefik and public services) and `docker network create arr` (internal: *arr stack and download clients).
 
 ## Prerequisites
 
@@ -61,11 +73,11 @@ Any issues with the installation should refer to the [Problems](#problems) secti
 
 Reverse proxy that handles SSL termination and routing for all services.
 
-In `traefik/docker-compose.yml`, update the `basicauth.users` label with your credentials. The password should be generated with `htpasswd`, and every `$` character must be escaped by doubling it (`$$`).
+The dashboard is not published through Traefik: it listens on `127.0.0.1:8082` of the host (`entryPoints.traefik` in `traefik/data/traefik.yml`), so there is no dashboard hostname, no basic auth and no credentials to keep in the repository. Open it with `ssh -L 8082:127.0.0.1:8082 user@nas` and browse `http://localhost:8082`.
 
 ### <a name="portainer"></a> Portainer
 
-Web-based Docker management UI.
+Web-based Docker management UI. It has full access to the Docker socket, so it is **not** exposed: it listens on `127.0.0.1:9000` only (SSH tunnel or Tailscale).
 
 ### Emby
 
@@ -73,14 +85,14 @@ Media server for movies and TV shows (`emby/`). Only Emby lives in this stack, s
 
 `PUID`/`PGID` should match your user. See [User ID and Group ID](#user).
 
-Hardware transcoding uses `/dev/dri` with the host `render` and `video` GIDs (`RENDER_GID`/`VIDEO_GID`, defaults `992`/`44`). These are **not guaranteed to be the same across installations** — check them before deploying:
+Hardware transcoding uses `/dev/dri` with the host `render` and `video` GIDs (`RENDER_GID`/`VIDEO_GID` in `.env`, typically `993`/`44` on Ubuntu 24.04). These are **not guaranteed to be the same across installations** — check them before deploying:
 
 ```sh
 getent group render
 getent group video
 ```
 
-### Arr (Radarr, Sonarr, Prowlarr, FlareSolverr, Seerr)
+### Arr (Radarr, Sonarr, Prowlarr, Profilarr, FlareSolverr, Seerr)
 
 Media automation stack (`arr/`):
 
@@ -97,11 +109,11 @@ Radarr, Sonarr, Prowlarr, Profilarr and FlareSolverr are **internal only**: they
 
 Real-Debrid download client ([RDTClient](https://github.com/rogerfar/rdt-client)).
 
-See `debrid/README.md` for post-installation configuration.
+See `debrid/README.md` for post-installation configuration. The UI is internal: `127.0.0.1:6500` (SSH tunnel or Tailscale).
 
 ### Transmission
 
-BitTorrent client. Downloads go to `${DATA_ROOT}/downloads`. The `PUID` and `PGID` environment variables are described in [User ID and Group ID](#user).
+BitTorrent client. Downloads go to `${DATA_ROOT}/downloads`. The web UI listens on `127.0.0.1:9091` only (SSH tunnel or Tailscale); only the peer port `51413` TCP/UDP is published. The `PUID` and `PGID` environment variables are described in [User ID and Group ID](#user).
 
 ### Navidrome
 
@@ -117,6 +129,10 @@ Self-hosted photo and video manager (`immich/`): server, machine learning, Postg
 
 Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits only). Then create the admin account at `https://immich.snackk-media.com`.
 
+### Tailscale
+
+VPN (`tailscale/`) that gives you secure remote access to the NAS, the LAN and the internal-only services (such as the *arr UIs, via SSH tunnel) without opening more router ports. It runs with `network_mode: host`, `NET_ADMIN` and `/dev/net/tun`, and advertises your LAN (`TS_ROUTES`) as a subnet router, so it is not routed through Traefik. Set `TS_AUTHKEY` in `.env` for the first start (state is kept in `${CONFIG_ROOT}/tailscale`), enable IP forwarding on the host, approve the route in the Tailscale admin console, and allow UDP `41641` in UFW (optionally forward it on the router). See step 10.1 of the migration guide.
+
 ## Upgrading Services
 
 All services can be upgraded with:
@@ -131,7 +147,7 @@ This pulls the latest images and recreates only the containers that have changed
 
 ## Emby Backup & Restore
 
-The Emby config is a bind mount at `${CONFIG_ROOT}/emby` (default `/mnt/pool/config/emby`).
+The Emby config is a bind mount at `${CONFIG_ROOT}/emby` (e.g. `/mnt/pool/config/emby`).
 
 ### Backup
 

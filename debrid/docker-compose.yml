@@ -3,23 +3,18 @@ services:
     image: rogerfar/rdtclient:latest
     container_name: debrid
     restart: unless-stopped
+    ports:
+      # Web UI: localhost only (SSH tunnel / Tailscale), not exposed through Traefik
+      - "127.0.0.1:6500:6500"
     networks:
-      - web
       - arr
     environment:
-      - "PUID=${PUID:-1000}"
-      - "PGID=${PGID:-1000}"
-      - "TZ=${TZ:-Europe/Lisbon}"
+      - "PUID=${PUID:?Set PUID in .env}"
+      - "PGID=${PGID:?Set PGID in .env}"
+      - "TZ=${TZ:?Set TZ in .env}"
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/debrid:/data/db
-      - ${DATA_ROOT:-/mnt/pool}/downloads:/data/downloads
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.debrid.entrypoints=https"
-      - "traefik.http.routers.debrid.rule=Host(`debrid.${DOMAIN:-snackk-media.com}`)"
-      - "traefik.http.routers.debrid.middlewares=secure-headers@file"
-      - "traefik.http.services.debrid.loadbalancer.server.port=6500"
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/debrid:/data/db
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/downloads:/data/downloads
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:6500/ || exit 1
       start_period: 20s
@@ -32,7 +27,5 @@ services:
         max-file: "3"
 
 networks:
-  web:
-    external: true
   arr:
     external: true

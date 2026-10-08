@@ -7,30 +7,22 @@ services:
       # BitTorrent peer port must be reachable from the Internet (forward it on the router)
       - "51413:51413"
       - "51413:51413/udp"
+      # Web UI: localhost only (SSH tunnel / Tailscale), not exposed through Traefik
+      - "127.0.0.1:9091:9091"
     networks:
-      - web
       - arr
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/transmission:/config
-      - ${DATA_ROOT:-/mnt/pool}/downloads:/downloads
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/transmission:/config
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/downloads:/downloads
     environment:
-      - "PUID=${PUID:-1000}"
-      - "PGID=${PGID:-1000}"
-      - "TZ=${TZ:-Europe/Lisbon}"
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.transmission.entrypoints=https"
-      - "traefik.http.routers.transmission.rule=Host(`transmission.${DOMAIN:-snackk-media.com}`)"
-      - "traefik.http.routers.transmission.middlewares=secure-headers@file"
-      - "traefik.http.services.transmission.loadbalancer.server.port=9091"
+      - "PUID=${PUID:?Set PUID in .env}"
+      - "PGID=${PGID:?Set PGID in .env}"
+      - "TZ=${TZ:?Set TZ in .env}"
     logging:
       options:
         max-size: "10m"
         max-file: "3"
 
 networks:
-  web:
-    external: true
   arr:
     external: true

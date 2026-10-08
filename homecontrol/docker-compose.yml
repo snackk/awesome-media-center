@@ -18,13 +18,13 @@ services:
       HC_API_KEY: ${HC_API_KEY:?Set HC_API_KEY in .env}
 
       # ── Netatmo OAuth2 (optional) ─────────────────────────────────────────────
-      NETATMO_CLIENT_ID: ${NETATMO_CLIENT_ID:-}
-      NETATMO_CLIENT_SECRET: ${NETATMO_CLIENT_SECRET:-}
-      NETATMO_ACCESS_TOKEN: ${NETATMO_ACCESS_TOKEN:-}
+      NETATMO_CLIENT_ID: ${NETATMO_CLIENT_ID?Set NETATMO_CLIENT_ID in .env (may be empty)}
+      NETATMO_CLIENT_SECRET: ${NETATMO_CLIENT_SECRET?Set NETATMO_CLIENT_SECRET in .env (may be empty)}
+      NETATMO_ACCESS_TOKEN: ${NETATMO_ACCESS_TOKEN?Set NETATMO_ACCESS_TOKEN in .env (may be empty)}
 
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/homecontrol/state:/var/lib/homecontrol
-      - ${SSH_KEY_PATH:-/mnt/pool/config/homecontrol/ssh/id_rsa}:/home/app/.ssh/id_rsa:ro
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/homecontrol/state:/var/lib/homecontrol
+      - ${SSH_KEY_PATH:?Set SSH_KEY_PATH in .env}:/home/app/.ssh/id_rsa:ro
       - /run/avahi-daemon/socket:/run/avahi-daemon/socket
 
     healthcheck:

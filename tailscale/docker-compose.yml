@@ -1,0 +1,47 @@
+services:
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    hostname: ${TS_HOSTNAME:?Set TS_HOSTNAME in .env}
+    restart: unless-stopped
+
+    # Host networking so the NAS can act as a subnet router (reach the LAN and the
+    # 127.0.0.1-bound *arr UIs' host) and so direct WireGuard connections (UDP 41641)
+    # work without NAT traversal. Because of this the container is not on the "web"
+    # network and is NOT routed through Traefik: Tailscale is not an HTTP service.
+    network_mode: host
+
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+
+    environment:
+      # Only needed on first start (generate at https://login.tailscale.com/admin/settings/keys).
+      # The node identity is then kept in the state directory. Leave empty to log in via
+      # the URL printed in `docker logs tailscale`.
+      TS_AUTHKEY: ${TS_AUTHKEY?Set TS_AUTHKEY in .env (may be empty)}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      # Advertise the LAN to the tailnet (approve the route in the admin console)
+      TS_ROUTES: ${TS_ROUTES:?Set TS_ROUTES in .env}
+      TS_ACCEPT_DNS: "false"
+      TS_EXTRA_ARGS: ${TS_EXTRA_ARGS?Set TS_EXTRA_ARGS in .env (may be empty)}
+      TZ: ${TZ:?Set TZ in .env}
+
+    volumes:
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/tailscale:/var/lib/tailscale
+
+    healthcheck:
+      test: ["CMD", "tailscale", "status", "--peers=false"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+

@@ -8,9 +8,9 @@ x-common: &common
       max-file: "3"
 
 x-lsio-env: &lsio-env
-  PUID: ${PUID:-1000}
-  PGID: ${PGID:-1000}
-  TZ: ${TZ:-Europe/Lisbon}
+  PUID: ${PUID:?Set PUID in .env}
+  PGID: ${PGID:?Set PGID in .env}
+  TZ: ${TZ:?Set TZ in .env}
 
 # The *arr services are internal only: they live on the shared `arr` network
 # (also joined by transmission and debrid) and are NOT exposed through Traefik.
@@ -26,9 +26,9 @@ services:
     ports:
       - "127.0.0.1:7878:7878"
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/radarr:/config
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/radarr:/config
       # One mount for media + downloads => hardlinks / atomic moves
-      - ${DATA_ROOT:-/mnt/pool}:/data
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}:/data
     healthcheck:
       test: curl -fsS http://localhost:7878/ping || exit 1
       start_period: 30s
@@ -44,8 +44,8 @@ services:
     ports:
       - "127.0.0.1:8989:8989"
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/sonarr:/config
-      - ${DATA_ROOT:-/mnt/pool}:/data
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/sonarr:/config
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}:/data
     healthcheck:
       test: curl -fsS http://localhost:8989/ping || exit 1
       start_period: 30s
@@ -61,7 +61,7 @@ services:
     ports:
       - "127.0.0.1:9696:9696"
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/prowlarr:/config
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/prowlarr:/config
     healthcheck:
       test: curl -fsS http://localhost:9696/ping || exit 1
       start_period: 30s
@@ -78,11 +78,11 @@ services:
       <<: *lsio-env
       UMASK: "022"
       # Only needed if you ever put it behind a reverse proxy:
-      # ORIGIN: https://profilarr.${DOMAIN:-snackk-media.com}
+      # ORIGIN: https://profilarr.${DOMAIN:?Set DOMAIN in .env}
     ports:
       - "127.0.0.1:6868:6868"
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/profilarr:/config
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/profilarr:/config
     depends_on:
       - radarr
       - sonarr
@@ -94,7 +94,7 @@ services:
     container_name: flaresolverr
     environment:
       LOG_LEVEL: info
-      TZ: ${TZ:-Europe/Lisbon}
+      TZ: ${TZ:?Set TZ in .env}
 
   # User-facing: needs `web` (Traefik, Emby) and `arr` (Radarr/Sonarr).
   seerr:
@@ -106,14 +106,14 @@ services:
     container_name: seerr
     environment:
       LOG_LEVEL: info
-      TZ: ${TZ:-Europe/Lisbon}
+      TZ: ${TZ:?Set TZ in .env}
     volumes:
-      - ${CONFIG_ROOT:-/mnt/pool/config}/seerr:/app/config
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/seerr:/app/config
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"
       - "traefik.http.routers.seerr.entrypoints=https"
-      - "traefik.http.routers.seerr.rule=Host(`seerr.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.seerr.rule=Host(`seerr.${DOMAIN:?Set DOMAIN in .env}`)"
       - "traefik.http.routers.seerr.middlewares=secure-headers@file"
       - "traefik.http.services.seerr.loadbalancer.server.port=5055"
     healthcheck:

@@ -3,26 +3,17 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: unless-stopped
-    networks:
-      - web
+    ports:
+      # Admin tool (full Docker access): localhost only, use an SSH tunnel / Tailscale
+      - "127.0.0.1:9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${CONFIG_ROOT:-/mnt/pool/config}/portainer:/data
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/portainer:/data
     security_opt:
       - no-new-privileges:true
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.portainer.entrypoints=https"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.${DOMAIN:-snackk-media.com}`)"
-      - "traefik.http.routers.portainer.middlewares=secure-headers@file"
-      - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     logging:
       options:
         max-size: "10m"
         max-file: "3"
 
-networks:
-  web:
-    external: true
 

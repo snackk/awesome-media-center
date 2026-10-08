@@ -50,6 +50,7 @@ Everything media-related lives under one MergerFS pool, mounted at `/mnt/pool`. 
     ├── homecontrol/
     │   ├── state/
     │   └── ssh/
+    ├── tailscale/          (node identity/state)
     └── portainer/
 ```
 
@@ -77,7 +78,7 @@ The WD Blue is a **data disk only**: the Ubuntu installer must not touch it. **P
    - Choose **Ubuntu Server** (not minimized).
    - Network: DHCP is fine; a fixed address is configured on the router (step 2.4).
    - Storage: select **only** the NVMe/USB target, use the whole disk. LVM is optional.
-   - Create your user (this will be UID/GID `1000`, matching the defaults in the compose files) and hostname.
+   - Create your user (this will be UID/GID `1000`, matching `PUID`/`PGID` in `.env.example`) and hostname.
    - Enable **Install OpenSSH server** (import your GitHub SSH keys if you want).
    - Do **not** select any snaps (no Docker snap — Docker is installed from the official apt repository in [step 7](#7-install-docker-and-clone-the-repository)).
 4. Reboot, remove the USB stick and log in over SSH: `ssh <user>@<nas-ip>`.
@@ -116,7 +117,8 @@ sudo ufw allow OpenSSH
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw allow 51413        # Transmission peers (tcp + udp)
-sudo ufw allow 8096/tcp     # Emby direct LAN access (optional, see note below)
+sudo ufw allow 41641/udp    # Tailscale direct (WireGuard) connections
+sudo ufw allow in on tailscale0   # traffic coming from your tailnet
 # HomeControl (host network, port 8080): reachable ONLY from Docker networks (Traefik),
 # not from the LAN
 sudo ufw allow from 172.16.0.0/12 to any port 8080 proto tcp
@@ -126,7 +128,7 @@ sudo ufw status verbose
 
 Notes:
 
-- Docker-published ports (`80`, `443`, `51413`, `8096`) are reachable regardless of UFW. The rules above document the intent; to *actually* restrict a published port, bind it to an address in the compose file (for example `192.168.1.10:8096:8096`) or use the `DOCKER-USER` chain.
+- Docker-published ports (`80`, `443`, `51413`) are reachable regardless of UFW. The rules above document the intent; to *actually* restrict a published port, bind it to an address in the compose file (for example `127.0.0.1:9000:9000`) or use the `DOCKER-USER` chain.
 - From another LAN machine verify that `curl -m 3 http://<nas-ip>:8080` times out while `https://homecontrol.snackk-media.com` works.
 - Do not forward ports other than `80`, `443` and `51413` on the router.
 
@@ -346,19 +348,22 @@ MergerFS presents several disks as a single directory. Files are stored whole on
    cd ~/awesome-media-center
    ```
 
-3. Create the shared Docker network used by Traefik and all services:
+3. Create the shared Docker networks. `web` is used by Traefik and the public services. `arr` is internal: it connects Radarr, Sonarr, Prowlarr, Profilarr, Seerr, Transmission and Debrid, and is never exposed through Traefik:
 
    ```sh
    docker network create web
+   docker network create arr
    ```
 
-4. (Optional) override defaults. The compose files default to `/mnt/pool`, UID/GID `1000`, timezone `Europe/Lisbon`. To change them:
+   The admin UIs (Radarr 7878, Sonarr 8989, Prowlarr 9696, Profilarr 6868, Transmission 9091, Debrid 6500, Portainer 9000, Traefik dashboard 8082) only listen on `127.0.0.1` of the NAS and are never routed through Traefik. Reach them with an SSH tunnel, e.g. `ssh -L 7878:127.0.0.1:7878 <user>@<nas-ip>` and open `http://localhost:7878` (this also works over Tailscale). Inside Docker, apps reach each other by container name (e.g. `http://radarr:7878`, `http://transmission:9091`).
+
+4. Create the `.env` file. It is **required**: the compose files have no defaults, so any missing variable makes `docker compose` fail with a clear message. Fill in every value (`PUID`/`PGID`, `TZ`, `DOMAIN`, paths, GIDs, Immich, HomeControl, Tailscale); variables marked "may be empty" must still be present:
 
    ```sh
    cp .env.example .env
    nano .env
    # Make the file available to every stack
-   for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol; do ln -sf ../.env "$d/.env"; done
+   for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
    ```
 
 5. Check the host GIDs used for hardware transcoding (Intel iGPU via `/dev/dri`) and set `RENDER_GID`/`VIDEO_GID` in `.env`. On Ubuntu 24.04 `video` is normally `44`, but `render` is often **not** `992` (commonly `993`), so do not skip this:
@@ -497,7 +502,7 @@ Run from the **Raspberry Pi**, in the folder where the old `docker-compose.yml` 
 
 1. Give the NAS a fixed IP (DHCP reservation).
 2. On the router, change the port forwards for **80** and **443** from the old computer to the NAS IP. Also forward **51413 TCP/UDP** to the NAS (Transmission peer port).
-3. DNS records for `*.snackk-media.com` (emby, seerr, radarr, sonarr, prowlarr, transmission, debrid, immich, navidrome, homecontrol, portainer, dashboard) do not need to change if the public IP stays the same. If you use dynamic DNS, make sure the updater runs on the NAS (or on the router) from now on.
+3. DNS records for `*.snackk-media.com`: only the user-facing hostnames need to resolve to your public IP (emby, seerr, immich, navidrome, homecontrol). The admin tools (radarr, sonarr, prowlarr, transmission, debrid, portainer, dashboard) are no longer published, so their records can be deleted. They do not need to change if the public IP stays the same. If you use dynamic DNS, make sure the updater runs on the NAS (or on the router) from now on.
 4. Make sure the old computer no longer listens on 80/443 (stopped in step 8.1).
 
 ## 10. Start the stacks
@@ -516,7 +521,34 @@ cd ~/awesome-media-center
 (cd immich       && docker compose up -d)   # requires IMMICH_DB_PASSWORD in .env
 (cd navidrome    && docker compose up -d)
 (cd homecontrol  && docker compose up -d)   # requires HC_* variables in .env
+(cd tailscale    && docker compose up -d)   # see step 10.1
 ```
+
+### 10.1. Tailscale (VPN)
+
+Tailscale runs with host networking (`tailscale/`), so it is not routed through Traefik. It lets you reach the NAS, the LAN and the internal-only services from anywhere without opening more ports on the router.
+
+1. Enable IP forwarding on the host (needed for the subnet router):
+
+   ```sh
+   echo 'net.ipv4.ip_forward = 1' | sudo tee /etc/sysctl.d/99-tailscale.conf
+   echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
+   sudo sysctl -p /etc/sysctl.d/99-tailscale.conf
+   ```
+
+2. Generate an auth key at <https://login.tailscale.com/admin/settings/keys> and set `TS_AUTHKEY` in `.env` (only needed on the first start), plus `TS_ROUTES` with your LAN subnet (default `192.168.1.0/24`). Without a key, open the login URL shown by `docker logs tailscale`.
+3. Start it and check the node:
+
+   ```sh
+   cd ~/awesome-media-center/tailscale && docker compose up -d
+   docker exec tailscale tailscale status
+   ```
+
+4. In the Tailscale admin console, **approve the advertised subnet route** for the NAS and, optionally, disable key expiry for it.
+5. Optional: forward **UDP 41641** on the router to the NAS for direct connections. It works without it, via relays, but slower.
+6. After the first start you can remove `TS_AUTHKEY` from `.env`; the identity is stored in `${CONFIG_ROOT}/tailscale`.
+
+From a device on your tailnet you can now SSH to the NAS and open tunnels to the *arr UIs.
 
 Check status and logs:
 
@@ -540,7 +572,7 @@ Because the paths inside the containers changed (everything is now under `/data`
   | Transmission (host `transmission`) | `/downloads/` | `/data/downloads/` |
   | RDTClient | *(none needed after the change below)* | |
 
-- Download client hostnames are container names on the shared `web` network (`transmission`, `debrid`, `prowlarr`, `flaresolverr`), so they keep working.
+- Download client hostnames are container names on the shared `arr` network (`transmission`, `debrid`, `prowlarr`, `flaresolverr`), so they keep working.
 - Enable **Settings → Media Management → Use Hardlinks instead of Copy**.
 
 ### Prowlarr
@@ -566,7 +598,8 @@ Because the paths inside the containers changed (everything is now under `/data`
 
 ## 12. Verification checklist
 
-- [ ] `https://dashboard.snackk-media.com` loads (basic auth) and shows all routers as healthy
+- [ ] The Traefik dashboard loads through a tunnel (`ssh -L 8082:127.0.0.1:8082 <user>@<nas-ip>`, then `http://localhost:8082`) and shows all routers as healthy
+- [ ] Admin ports are not reachable from another LAN machine: `curl -m 3 http://<nas-ip>:9000` (Portainer), `:7878`, `:9091` must all time out
 - [ ] HTTP → HTTPS redirect works: `curl -I http://emby.snackk-media.com`
 - [ ] Valid certificates for every sub-domain (reused from `acme.json`, or reissued)
 - [ ] Emby plays direct stream and transcode (hardware acceleration)
@@ -575,6 +608,8 @@ Because the paths inside the containers changed (everything is now under `/data`
 - [ ] `sudo idle3ctl -g /dev/sdX` reports the timer disabled
 - [ ] `Load_Cycle_Count` is not increasing: `sudo smartctl -A /dev/sdX`
 - [ ] `sudo ufw status` is active and `curl -m 3 http://<nas-ip>:8080` from the LAN times out (HomeControl only via Traefik)
+- [ ] `docker exec tailscale tailscale status` shows the NAS online, and the subnet route is approved
+- [ ] From a device on the tailnet (mobile data), you can reach `ssh <user>@<nas-tailscale-ip>`
 - [ ] `docker compose version` works for your user without `sudo` (you are in the `docker` group)
 - [ ] After a reboot, `/mnt/pool` is mounted **before** the containers start
 

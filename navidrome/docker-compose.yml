@@ -3,7 +3,7 @@ services:
     image: deluan/navidrome:latest
     container_name: navidrome
     restart: unless-stopped
-    user: "${PUID:-1000}:${PGID:-1000}"
+    user: "${PUID:?Set PUID in .env}:${PGID:?Set PGID in .env}"
     networks:
       - web
     environment:
@@ -11,17 +11,17 @@ services:
       ND_LOGLEVEL: info
       ND_SESSIONTIMEOUT: 24h
       ND_BASEURL: ""
-      TZ: ${TZ:-Europe/Lisbon}
+      TZ: ${TZ:?Set TZ in .env}
     volumes:
       # Database, cache and playlists
-      - ${CONFIG_ROOT:-/mnt/pool/config}/navidrome:/data
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/navidrome:/data
       # Music library (read-only)
-      - ${DATA_ROOT:-/mnt/pool}/media/music:/music:ro
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/media/music:/music:ro
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"
       - "traefik.http.routers.navidrome.entrypoints=https"
-      - "traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN:-snackk-media.com}`)"
+      - "traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN:?Set DOMAIN in .env}`)"
       - "traefik.http.routers.navidrome.middlewares=secure-headers@file"
       - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
     healthcheck:

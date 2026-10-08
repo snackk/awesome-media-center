@@ -108,7 +108,7 @@ Music streaming server (`navidrome/`), compatible with Subsonic clients. Library
 
 ### HomeControl
 
-Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so it can resolve `.local` (mDNS) ESPHome/Shelly devices through the host's `avahi-daemon`, which must be installed and running on the NAS. Because it is not on the `web` network, Traefik reaches it through a file-provider route in `traefik/data/config.yml` (`host.docker.internal:8080`); the hostname there is hardcoded (`homecontrol.snackk-media.com`), so edit it if you change `DOMAIN`. Port 8080 is also reachable directly on the host LAN. Set `HC_USERNAME`, `HC_PASSWORD` and `HC_API_KEY` in `.env` and place the SSH key at `${SSH_KEY_PATH}` (default `/mnt/pool/config/homecontrol/ssh/id_rsa`, readable by the container user).
+Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so it can resolve `.local` (mDNS) ESPHome/Shelly devices through the host's `avahi-daemon`, which must be installed and running on the NAS. Because it is not on the `web` network, Traefik reaches it through a file-provider route in `traefik/data/config.yml` (`host.docker.internal:8080`); the hostname there is hardcoded (`homecontrol.snackk-media.com`), so edit it if you change `DOMAIN`. Host networking binds port 8080 on every interface, so block it from the LAN with UFW and allow only Docker networks (see step 2.5 of the migration guide). Set `HC_USERNAME`, `HC_PASSWORD` and `HC_API_KEY` in `.env` and place the SSH key at `${SSH_KEY_PATH}` (default `/mnt/pool/config/homecontrol/ssh/id_rsa`, readable by the container user).
 
 ### Immich
 

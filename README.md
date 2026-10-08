@@ -14,7 +14,7 @@ Traefik acts as a reverse proxy for the **user-facing** services only, listening
 
 | Exposure | Services |
 | --- | --- |
-| **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl |
+| **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl (`home.<domain>`) |
 | **Internet, router port forward** | `80`, `443` (Traefik), `51413` TCP/UDP (Transmission peers) |
 | **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
 | **Localhost only (SSH tunnel / Tailscale)** | Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik dashboard `8082` |
@@ -121,7 +121,7 @@ Music streaming server (`navidrome/`), compatible with Subsonic clients. Library
 
 ### HomeControl
 
-Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so it can resolve `.local` (mDNS) ESPHome/Shelly devices through the host's `avahi-daemon`, which must be installed and running on the NAS. Because it is not on the `web` network, Traefik reaches it through a file-provider route in `traefik/data/config.yml` (`host.docker.internal:8080`); the hostname there is hardcoded (`homecontrol.snackk-media.com`), so edit it if you change `DOMAIN`. Host networking binds port 8080 on every interface, so block it from the LAN with UFW and allow only Docker networks (see step 2.5 of the migration guide). Set `HC_USERNAME`, `HC_PASSWORD` and `HC_API_KEY` in `.env` and place the SSH key at `${SSH_KEY_PATH}` (default `/mnt/pool/config/homecontrol/ssh/id_rsa`, readable by the container user).
+Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so it can resolve `.local` (mDNS) ESPHome/Shelly devices through the host's `avahi-daemon`, which must be installed and running on the NAS. Because it is not on the `web` network, Traefik reaches it through the host gateway (`host.docker.internal:8080`, enabled by `extra_hosts` in `traefik/docker-compose.yml`). The routing is declared with Docker labels on the container, published at `https://home.${DOMAIN}` (the Netatmo OAuth redirect URI is `https://home.snackk-media.com/netatmo/callback`). The source project (`home-control-server`) carries the same labels in its own `docker-compose.yml`. Host networking binds port 8080 on every interface, so block it from the LAN with UFW and allow only Docker networks (see step 2.5 of the migration guide). Set `HC_USERNAME`, `HC_PASSWORD` and `HC_API_KEY` in `.env` and place the SSH key at `${SSH_KEY_PATH}` (e.g. `/mnt/pool/config/homecontrol/ssh/id_rsa`, readable by the container user).
 
 ### Immich
 

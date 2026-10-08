@@ -9,22 +9,6 @@ http:
         browserXssFilter: true
         referrerPolicy: "same-origin"
 
-  routers:
-    # homecontrol runs with network_mode: host, so it is routed via the host gateway.
-    # (File provider cannot use env vars: keep the domain in sync with DOMAIN.)
-    homecontrol:
-      entryPoints:
-        - https
-      rule: "Host(`homecontrol.snackk-media.com`)"
-      middlewares:
-        - secure-headers
-      service: homecontrol
-
-  services:
-    homecontrol:
-      loadBalancer:
-        servers:
-          - url: "http://host.docker.internal:8080"
 
 tls:
   options:

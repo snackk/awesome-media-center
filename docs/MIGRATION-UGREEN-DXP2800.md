@@ -129,7 +129,7 @@ sudo ufw status verbose
 Notes:
 
 - Docker-published ports (`80`, `443`, `51413`) are reachable regardless of UFW. The rules above document the intent; to *actually* restrict a published port, bind it to an address in the compose file (for example `127.0.0.1:9000:9000`) or use the `DOCKER-USER` chain.
-- From another LAN machine verify that `curl -m 3 http://<nas-ip>:8080` times out while `https://homecontrol.snackk-media.com` works.
+- From another LAN machine verify that `curl -m 3 http://<nas-ip>:8080` times out while `https://home.snackk-media.com` works.
 - Do not forward ports other than `80`, `443` and `51413` on the router.
 
 ## 3. Disable Intellipark (idle3-tools)
@@ -502,7 +502,7 @@ Run from the **Raspberry Pi**, in the folder where the old `docker-compose.yml` 
 
 1. Give the NAS a fixed IP (DHCP reservation).
 2. On the router, change the port forwards for **80** and **443** from the old computer to the NAS IP. Also forward **51413 TCP/UDP** to the NAS (Transmission peer port).
-3. DNS records for `*.snackk-media.com`: only the user-facing hostnames need to resolve to your public IP (emby, seerr, immich, navidrome, homecontrol). The admin tools (radarr, sonarr, prowlarr, transmission, debrid, portainer, dashboard) are no longer published, so their records can be deleted. They do not need to change if the public IP stays the same. If you use dynamic DNS, make sure the updater runs on the NAS (or on the router) from now on.
+3. DNS records for `*.snackk-media.com`: only the user-facing hostnames need to resolve to your public IP (emby, seerr, immich, navidrome, home). The admin tools (radarr, sonarr, prowlarr, transmission, debrid, portainer, dashboard) are no longer published, so their records can be deleted. They do not need to change if the public IP stays the same. If you use dynamic DNS, make sure the updater runs on the NAS (or on the router) from now on.
 4. Make sure the old computer no longer listens on 80/443 (stopped in step 8.1).
 
 ## 10. Start the stacks

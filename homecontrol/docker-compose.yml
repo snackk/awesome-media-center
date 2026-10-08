@@ -7,9 +7,16 @@ services:
     # Host networking is required for mDNS (.local) resolution of ESPHome and Shelly
     # devices (needs avahi-daemon on the host). The container therefore cannot join
     # the "web" network and ports: is omitted; the app listens on host port 8080.
-    # Traefik reaches it through a file-provider route (see traefik/data/config.yml),
-    # via host.docker.internal -> host gateway.
+    # Traefik discovers it through the Docker labels below and reaches it via
+    # host.docker.internal -> host gateway (extra_hosts in traefik/docker-compose.yml).
     network_mode: host
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homecontrol.entrypoints=https"
+      - "traefik.http.routers.homecontrol.rule=Host(`home.${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.homecontrol.middlewares=secure-headers@file"
+      - "traefik.http.services.homecontrol.loadbalancer.server.port=8080"
 
     environment:
       # ── Required ──────────────────────────────────────────────────────────────

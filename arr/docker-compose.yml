@@ -1,7 +1,7 @@
 x-common: &common
   restart: unless-stopped
   networks:
-    - web
+    - arr
   logging:
     options:
       max-size: "10m"
@@ -12,24 +12,23 @@ x-lsio-env: &lsio-env
   PGID: ${PGID:-1000}
   TZ: ${TZ:-Europe/Lisbon}
 
-# Services are only reachable through Traefik (no published ports).
+# The *arr services are internal only: they live on the shared `arr` network
+# (also joined by transmission and debrid) and are NOT exposed through Traefik.
+# Ports are bound to 127.0.0.1 so you can reach the UIs via SSH tunnel, e.g.:
+#   ssh -L 7878:127.0.0.1:7878 user@nas
+# Only Seerr (user-facing requests) is also on `web` and published via Traefik.
 services:
   radarr:
     <<: *common
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     environment: *lsio-env
+    ports:
+      - "127.0.0.1:7878:7878"
     volumes:
       - ${CONFIG_ROOT:-/mnt/pool/config}/radarr:/config
       # One mount for media + downloads => hardlinks / atomic moves
       - ${DATA_ROOT:-/mnt/pool}:/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.radarr.entrypoints=https"
-      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN:-snackk-media.com}`)"
-      - "traefik.http.routers.radarr.middlewares=secure-headers@file"
-      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
     healthcheck:
       test: curl -fsS http://localhost:7878/ping || exit 1
       start_period: 30s
@@ -42,16 +41,11 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment: *lsio-env
+    ports:
+      - "127.0.0.1:8989:8989"
     volumes:
       - ${CONFIG_ROOT:-/mnt/pool/config}/sonarr:/config
       - ${DATA_ROOT:-/mnt/pool}:/data
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.sonarr.entrypoints=https"
-      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN:-snackk-media.com}`)"
-      - "traefik.http.routers.sonarr.middlewares=secure-headers@file"
-      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
     healthcheck:
       test: curl -fsS http://localhost:8989/ping || exit 1
       start_period: 30s
@@ -64,15 +58,10 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment: *lsio-env
+    ports:
+      - "127.0.0.1:9696:9696"
     volumes:
       - ${CONFIG_ROOT:-/mnt/pool/config}/prowlarr:/config
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=web"
-      - "traefik.http.routers.prowlarr.entrypoints=https"
-      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN:-snackk-media.com}`)"
-      - "traefik.http.routers.prowlarr.middlewares=secure-headers@file"
-      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
     healthcheck:
       test: curl -fsS http://localhost:9696/ping || exit 1
       start_period: 30s
@@ -80,7 +69,25 @@ services:
       interval: 30s
       retries: 3
 
-  # Internal only: used by Prowlarr (http://flaresolverr:8191). Not exposed via Traefik.
+  # Syncs quality profiles / custom formats to Radarr and Sonarr (http://radarr:7878, http://sonarr:8989).
+  profilarr:
+    <<: *common
+    image: ghcr.io/dictionarry-hub/profilarr:latest
+    container_name: profilarr
+    environment:
+      <<: *lsio-env
+      UMASK: "022"
+      # Only needed if you ever put it behind a reverse proxy:
+      # ORIGIN: https://profilarr.${DOMAIN:-snackk-media.com}
+    ports:
+      - "127.0.0.1:6868:6868"
+    volumes:
+      - ${CONFIG_ROOT:-/mnt/pool/config}/profilarr:/config
+    depends_on:
+      - radarr
+      - sonarr
+
+  # Internal only: used by Prowlarr (http://flaresolverr:8191).
   flaresolverr:
     <<: *common
     image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -88,11 +95,13 @@ services:
     environment:
       LOG_LEVEL: info
       TZ: ${TZ:-Europe/Lisbon}
-    labels:
-      - "traefik.enable=false"
 
+  # User-facing: needs `web` (Traefik, Emby) and `arr` (Radarr/Sonarr).
   seerr:
     <<: *common
+    networks:
+      - web
+      - arr
     image: ghcr.io/seerr-team/seerr:latest
     container_name: seerr
     environment:
@@ -116,5 +125,9 @@ services:
 
 networks:
   web:
+    external: true
+  # Shared with transmission and debrid so Radarr/Sonarr can reach the download clients.
+  # Create once: docker network create arr
+  arr:
     external: true
 

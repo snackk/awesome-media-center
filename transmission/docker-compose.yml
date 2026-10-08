@@ -9,6 +9,7 @@ services:
       - "51413:51413/udp"
     networks:
       - web
+      - arr
     volumes:
       - ${CONFIG_ROOT:-/mnt/pool/config}/transmission:/config
       - ${DATA_ROOT:-/mnt/pool}/downloads:/downloads
@@ -31,4 +32,5 @@ services:
 networks:
   web:
     external: true
-
+  arr:
+    external: true

@@ -41,6 +41,7 @@ Everything media-related lives under one MergerFS pool, mounted at `/mnt/pool`. 
     ├── radarr/
     ├── sonarr/
     ├── prowlarr/
+    ├── profilarr/
     ├── seerr/
     ├── transmission/
     ├── debrid/

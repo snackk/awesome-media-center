@@ -87,10 +87,11 @@ Media automation stack (`arr/`):
 - **Radarr** — Movie collection manager
 - **Sonarr** — TV series collection manager
 - **Prowlarr** — Indexer manager
+- **Profilarr** — Syncs quality profiles and custom formats to Radarr/Sonarr
 - **FlareSolverr** — Cloudflare bypass proxy for Prowlarr (internal only, not exposed)
 - **Seerr** — Media request UI
 
-These services are only reachable through Traefik (no published ports).
+Radarr, Sonarr, Prowlarr, Profilarr and FlareSolverr are **internal only**: they sit on the `arr` network (shared with Transmission and Debrid) and have no Traefik routes. Their UIs listen on `127.0.0.1` of the host only (Radarr 7878, Sonarr 8989, Prowlarr 9696, Profilarr 6868); use an SSH tunnel, e.g. `ssh -L 7878:127.0.0.1:7878 user@nas`. Only **Seerr** is exposed through Traefik, since it is the user-facing request UI.
 
 ### Debrid
 

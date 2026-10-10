@@ -117,7 +117,7 @@ BitTorrent client. Downloads go to `${DATA_ROOT}/downloads`. The web UI listens 
 
 ### Navidrome
 
-Music streaming server (`navidrome/`), compatible with Subsonic clients. Library: `${DATA_ROOT}/media/music` (mounted read-only); database/cache: `${CONFIG_ROOT}/navidrome`.
+Music streaming server (`navidrome/`), compatible with Subsonic clients. Library: `${DATA_ROOT}/music` (mounted read-only); database/cache: `${CONFIG_ROOT}/navidrome`.
 
 ### HomeControl
 
@@ -125,7 +125,7 @@ Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so
 
 ### Immich
 
-Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/media/Photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).
+Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).
 
 Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits only). Then create the admin account at `https://immich.snackk-media.com`.
 
@@ -199,7 +199,7 @@ id -g  # GID
 **Permissions on `acme.json` are too open:**
 
 ```sh
-chmod 600 traefik/data/acme.json
+chmod 600 ${CONFIG_ROOT}/traefik/acme.json
 ```
 
 ---

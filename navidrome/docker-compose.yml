@@ -16,7 +16,7 @@ services:
       # Database, cache and playlists
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/navidrome:/data
       # Music library (read-only)
-      - ${DATA_ROOT:?Set DATA_ROOT in .env}/media/music:/music:ro
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/music:/music:ro
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=web"

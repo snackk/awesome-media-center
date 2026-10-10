@@ -19,7 +19,7 @@ services:
     environment: *immich-env
     volumes:
       # Photo/video library
-      - ${DATA_ROOT:?Set DATA_ROOT in .env}/media/Photos:/data
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/photos:/data
       - /etc/localtime:/etc/localtime:ro
     depends_on:
       immich-redis:

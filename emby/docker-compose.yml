@@ -7,7 +7,8 @@ services:
       - web
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/emby:/config
-      - ${DATA_ROOT:?Set DATA_ROOT in .env}/media:/data/media
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/movies:/data/movies
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/shows:/data/shows
     devices:
       - /dev/dri:/dev/dri
     group_add:

@@ -283,7 +283,7 @@ MergerFS presents several disks as a single directory. Files are stored whole on
 5. Create the folder structure and permissions (use the UID/GID of the user that will run the containers, normally `1000:1000`; check with `id`):
 
    ```sh
-   sudo mkdir -p /mnt/pool/{media/{movies,shows,music,Photos},downloads,config}
+   sudo mkdir -p /media/data/{movies,shows,music,photos,downloads,configs}
    sudo chown -R 1000:1000 /mnt/pool
    ```
 
@@ -306,7 +306,7 @@ MergerFS presents several disks as a single directory. Files are stored whole on
 2. Because of `category.create=epmfs`, new files only land on a disk that already contains the parent directory. Create the base folders on the new disk so it is used:
 
    ```sh
-   sudo mkdir -p /mnt/disks/disk2/{media/{movies,shows,music,Photos},downloads}
+   sudo mkdir -p /mnt/disks/disk2/{movies,shows,music,photos,downloads}
    sudo chown -R 1000:1000 /mnt/disks/disk2
    ```
 
@@ -406,16 +406,16 @@ docker run --rm -v emby:/source:ro -v "$PWD":/backup alpine \
 `rsync` is resumable; re-run it if it is interrupted. `-H` preserves hardlinks, `-a` preserves permissions and times:
 
 ```sh
-rsync -aHh --info=progress2 --partial $OLD/Movies/ $NAS:/mnt/pool/media/movies/
-rsync -aHh --info=progress2 --partial $OLD/Shows/  $NAS:/mnt/pool/media/shows/
+rsync -aHh --info=progress2 --partial $OLD/Movies/ $NAS:/media/data/movies/
+rsync -aHh --info=progress2 --partial $OLD/Shows/  $NAS:/media/data/shows/
 
 # Anything else that was downloading (exclude what was already copied and config dirs)
 rsync -aHh --info=progress2 --partial \
   --exclude='Movies' --exclude='Shows' --exclude='*_config' --exclude='transmission_conf' \
-  $OLD/ $NAS:/mnt/pool/downloads/
+  $OLD/ $NAS:/media/data/downloads/
 ```
 
-> `rsync -a` preserves the numeric UID/GID of the old computer. If your old user was not UID/GID `1000`, fix ownership on the NAS afterwards: `sudo chown -R 1000:1000 /mnt/pool/media /mnt/pool/downloads`.
+> `rsync -a` preserves the numeric UID/GID of the old computer. If your old user was not UID/GID `1000`, fix ownership on the NAS afterwards: `sudo chown -R 1000:1000 /media/data/movies /media/data/shows /media/data/downloads`.
 
 > For a first pass you can run these while the old stack is still running, then run them again (fast) after stopping it for the final sync.
 
@@ -446,13 +446,15 @@ sudo chown -R 1000:1000 /mnt/pool/config
 ### 8.5. Copy the Traefik data (keeps the existing Let's Encrypt certificates)
 
 ```sh
-rsync -aHh ~/awesome-media-center/traefik/data/acme.json $NAS:~/awesome-media-center/traefik/data/acme.json
+ssh $NAS 'mkdir -p /media/data/configs/traefik'
+rsync -aHh ~/awesome-media-center/traefik/data/acme.json $NAS:/media/data/configs/traefik/acme.json
 ```
 
 On the NAS:
 
 ```sh
-chmod 600 ~/awesome-media-center/traefik/data/acme.json
+touch /media/data/configs/traefik/acme.json   # must exist as a file, or Docker creates a directory
+chmod 600 /media/data/configs/traefik/acme.json
 ```
 
 > The repository version of the compose/config files is already adapted to the new layout; pull the latest changes on the NAS instead of copying the old files.
@@ -470,7 +472,7 @@ Run from the **Raspberry Pi**, in the folder where the old `docker-compose.yml` 
 2. Music library and Navidrome data (its database references tracks as `/music/...`, which stays the same inside the container, so no re-scan of paths is needed):
 
    ```sh
-   rsync -aHh --info=progress2 --partial /home/snackk/Music/ $NAS:/mnt/pool/media/music/
+   rsync -aHh --info=progress2 --partial /home/snackk/Music/ $NAS:/media/data/music/
    rsync -aHh ./navidrome/ $NAS:/mnt/pool/config/navidrome/
    ```
 
@@ -489,7 +491,7 @@ Run from the **Raspberry Pi**, in the folder where the old `docker-compose.yml` 
    ```sh
    sudo tar xzf /tmp/homecontrol-state.tar.gz -C /mnt/pool/config/homecontrol/state
    chmod 600 /mnt/pool/config/homecontrol/ssh/id_rsa
-   sudo chown -R 1000:1000 /mnt/pool/config/navidrome /mnt/pool/config/homecontrol /mnt/pool/media/music
+   sudo chown -R 1000:1000 /mnt/pool/config/navidrome /mnt/pool/config/homecontrol /media/data/music
    # HomeControl runs as an unknown UID inside the container: if the state or the key is
    # not readable, check `docker logs homecontrol` and adjust ownership accordingly.
    ```
@@ -563,7 +565,7 @@ Because the paths inside the containers changed (everything is now under `/data`
 
 ### Radarr / Sonarr
 
-- **Settings → Media Management → Root Folders**: add `/data/media/movies` (Radarr) / `/data/media/shows` (Sonarr).
+- **Settings → Media Management → Root Folders**: add `/data/movies` (Radarr) / `/data/shows` (Sonarr).
 - **Movies / Series → Mass Editor**: select all, change the root folder to the new one, and choose **No, I'll move the files myself** (the files are already there).
 - **Settings → Download Clients → Remote Path Mappings**:
 
@@ -581,7 +583,7 @@ Because the paths inside the containers changed (everything is now under `/data`
 
 ### Emby
 
-- **Settings → Library**: edit each library and replace the folder paths with `/data/media/movies` and `/data/media/shows`, then run **Scan media library**.
+- **Settings → Library**: edit each library and replace the folder paths with `/data/movies` and `/data/shows`, then run **Scan media library**.
 - Check hardware transcoding: *Settings → Transcoding* → enable VAAPI / Intel QuickSync. If it fails, review `RENDER_GID` / `VIDEO_GID`.
 
 ### Seerr

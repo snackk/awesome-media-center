@@ -12,7 +12,7 @@ services:
       - "127.0.0.1:8082:8082"
     volumes:
       - ./data/traefik.yml:/traefik.yml:ro
-      - ./data/acme.json:/acme.json
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/traefik/acme.json:/acme.json
       - ./data/config.yml:/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     extra_hosts:

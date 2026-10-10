@@ -1,0 +1,48 @@
+services:
+  homecontrol:
+    image: snackk/homecontrol:latest
+    container_name: homecontrol
+    restart: unless-stopped
+
+    # Host networking is required for mDNS (.local) resolution of ESPHome and Shelly
+    # devices (needs avahi-daemon on the host). The container therefore cannot join
+    # the "web" network and ports: is omitted; the app listens on host port 8080.
+    # Traefik discovers it through the Docker labels below and reaches it via
+    # host.docker.internal -> host gateway (extra_hosts in traefik/docker-compose.yml).
+    network_mode: host
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homecontrol.entrypoints=https"
+      - "traefik.http.routers.homecontrol.rule=Host(`home.${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.homecontrol.middlewares=secure-headers@file"
+      - "traefik.http.services.homecontrol.loadbalancer.server.port=8080"
+
+    environment:
+      # ── Required ──────────────────────────────────────────────────────────────
+      HC_USERNAME: ${HC_USERNAME:?Set HC_USERNAME in .env}
+      HC_PASSWORD: ${HC_PASSWORD:?Set HC_PASSWORD in .env}
+      HC_API_KEY: ${HC_API_KEY:?Set HC_API_KEY in .env}
+
+      # ── Netatmo OAuth2 (optional) ─────────────────────────────────────────────
+      NETATMO_CLIENT_ID: ${NETATMO_CLIENT_ID?Set NETATMO_CLIENT_ID in .env (may be empty)}
+      NETATMO_CLIENT_SECRET: ${NETATMO_CLIENT_SECRET?Set NETATMO_CLIENT_SECRET in .env (may be empty)}
+      NETATMO_ACCESS_TOKEN: ${NETATMO_ACCESS_TOKEN?Set NETATMO_ACCESS_TOKEN in .env (may be empty)}
+
+    volumes:
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/homecontrol/state:/var/lib/homecontrol
+      - ${SSH_KEY_PATH:?Set SSH_KEY_PATH in .env}:/home/app/.ssh/id_rsa:ro
+      - /run/avahi-daemon/socket:/run/avahi-daemon/socket
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+

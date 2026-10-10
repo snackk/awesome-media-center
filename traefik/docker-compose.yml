@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik
+    image: traefik:v3
     container_name: traefik
     restart: unless-stopped
     networks:
@@ -8,30 +8,29 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      # Dashboard/API: localhost only (SSH tunnel / Tailscale), never routed through Traefik
+      - "127.0.0.1:8082:8082"
     volumes:
       - ./data/traefik.yml:/traefik.yml:ro
-      - ./data/acme.json:/acme.json
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/traefik/acme.json:/acme.json
       - ./data/config.yml:/config.yml:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.entrypoints=http"
-      - "traefik.http.routers.traefik.rule=Host(`dashboard.snackk-media.com`)"
-      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.permanent=true"
-      - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
-
-      - "traefik.http.routers.traefik-secure.entrypoints=https"
-      - "traefik.http.routers.traefik-secure.rule=Host(`dashboard.snackk-media.com`)"
-      - "traefik.http.routers.traefik-secure.tls=true"
-      - "traefik.http.routers.traefik-secure.tls.certresolver=ssl-cert"
-      - "traefik.http.routers.traefik-secure.service=api@internal"
-
-      - "traefik.http.middlewares.traefik-auth.basicauth.users=snackk:$$apr1$$4rzTfR6u$$1KWcbCpqRVMoszfZv2.XV/"
-      - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+    extra_hosts:
+      # Lets Traefik reach services running with network_mode: host (homecontrol)
+      - "host.docker.internal:host-gateway"
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   web:
     external: true
+

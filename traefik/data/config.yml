@@ -1,5 +1,17 @@
 http:
   middlewares:
-    https-redirect:
-      redirectScheme:
-        scheme: https
+    # Applied to every service via: traefik.http.routers.<name>.middlewares=secure-headers@file
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "same-origin"
+
+
+tls:
+  options:
+    default:
+      minVersion: VersionTLS12
+

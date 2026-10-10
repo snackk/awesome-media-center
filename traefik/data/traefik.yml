@@ -1,17 +1,39 @@
 api:
   dashboard: true
+  # Served on the dedicated "traefik" entrypoint (:8082), published only on 127.0.0.1
+  # in docker-compose.yml. Not reachable from the LAN or the Internet.
+  insecure: true
   debug: false
 
+ping: {}
+
+log:
+  level: INFO
+
 entryPoints:
+  traefik:
+    address: ":8082"
   http:
     address: ":80"
+    http:
+      # Global HTTP -> HTTPS redirect: services only need an https router
+      redirections:
+        entryPoint:
+          to: https
+          scheme: https
+          permanent: true
   https:
     address: ":443"
+    http:
+      # TLS + certificate resolver for every router on this entrypoint
+      tls:
+        certResolver: ssl-cert
 
 providers:
   docker:
     endpoint: "unix:///var/run/docker.sock"
     exposedByDefault: false
+    network: web
   file:
     filename: /config.yml
 
@@ -22,3 +44,4 @@ certificatesResolvers:
       storage: acme.json
       httpChallenge:
         entryPoint: http
+

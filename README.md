@@ -17,10 +17,11 @@ Traefik acts as a reverse proxy for the **user-facing** services only, listening
 | **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl (`home.<domain>`) |
 | **Internet, router port forward** | `80`, `443` (Traefik), `51413` TCP/UDP (Transmission peers) |
 | **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
-| **Localhost only (SSH tunnel / Tailscale)** | Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik dashboard `8082` |
+| **Internet, via Traefik (admin tools, no extra auth)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid` and `traefik` (dashboard) at `<name>.<domain>`. Set authentication inside each app |
+| **Localhost only (SSH tunnel fallback)** | The same UIs are also bound to `127.0.0.1` (Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik `8082`) |
 | **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning |
 
-Admin tools never go through Traefik. Access them with an SSH tunnel, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas` and open `http://localhost:9000`, from the LAN or over Tailscale.
+Admin tools are published through Traefik at `<name>.<domain>` with HTTPS and **no extra authentication layer**: each app must have its own login enabled (Portainer admin, *arr "Authentication: Forms", Transmission/Debrid credentials). Each hostname needs a DNS record pointing to the router. The SSH tunnel on `127.0.0.1` still works, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas`.
 
 See [docs/MIGRATION-UGREEN-DXP2800.md](docs/MIGRATION-UGREEN-DXP2800.md) for the NAS setup (ext4 + MergerFS, Intellipark) and the migration guide.
 

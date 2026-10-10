@@ -12,23 +12,31 @@ x-lsio-env: &lsio-env
   PGID: ${PGID:?Set PGID in .env}
   TZ: ${TZ:?Set TZ in .env}
 
-# The *arr services are internal only: they live on the shared `arr` network
-# (also joined by transmission and debrid) and are NOT exposed through Traefik.
-# Ports are bound to 127.0.0.1 so you can reach the UIs via SSH tunnel, e.g.:
-#   ssh -L 7878:127.0.0.1:7878 user@nas
-# Only Seerr (user-facing requests) is also on `web` and published via Traefik.
+# Radarr, Sonarr, Prowlarr, Profilarr and Seerr join `web` and are published through Traefik
+# at <name>.${DOMAIN}. Ports are also bound to 127.0.0.1 as an SSH-tunnel fallback.
+# FlareSolverr stays internal (arr network only).
 services:
   radarr:
     <<: *common
     image: lscr.io/linuxserver/radarr:latest
     container_name: radarr
     environment: *lsio-env
+    networks:
+      - arr
+      - web
     ports:
       - "127.0.0.1:7878:7878"
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/radarr:/config
       # One mount for media + downloads => hardlinks / atomic moves
       - ${DATA_ROOT:?Set DATA_ROOT in .env}:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.radarr.entrypoints=https"
+      - "traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.radarr.middlewares=secure-headers@file"
+      - "traefik.http.services.radarr.loadbalancer.server.port=7878"
     healthcheck:
       test: curl -fsS http://localhost:7878/ping || exit 1
       start_period: 30s
@@ -41,11 +49,21 @@ services:
     image: lscr.io/linuxserver/sonarr:latest
     container_name: sonarr
     environment: *lsio-env
+    networks:
+      - arr
+      - web
     ports:
       - "127.0.0.1:8989:8989"
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/sonarr:/config
       - ${DATA_ROOT:?Set DATA_ROOT in .env}:/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.sonarr.entrypoints=https"
+      - "traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.sonarr.middlewares=secure-headers@file"
+      - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
     healthcheck:
       test: curl -fsS http://localhost:8989/ping || exit 1
       start_period: 30s
@@ -58,10 +76,20 @@ services:
     image: lscr.io/linuxserver/prowlarr:latest
     container_name: prowlarr
     environment: *lsio-env
+    networks:
+      - arr
+      - web
     ports:
       - "127.0.0.1:9696:9696"
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/prowlarr:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.prowlarr.entrypoints=https"
+      - "traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.prowlarr.middlewares=secure-headers@file"
+      - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
     healthcheck:
       test: curl -fsS http://localhost:9696/ping || exit 1
       start_period: 30s
@@ -77,12 +105,22 @@ services:
     environment:
       <<: *lsio-env
       UMASK: "022"
-      # Only needed if you ever put it behind a reverse proxy:
-      # ORIGIN: https://profilarr.${DOMAIN:?Set DOMAIN in .env}
+      # Required behind the reverse proxy
+      ORIGIN: https://profilarr.${DOMAIN:?Set DOMAIN in .env}
+    networks:
+      - arr
+      - web
     ports:
       - "127.0.0.1:6868:6868"
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/profilarr:/config
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=web"
+      - "traefik.http.routers.profilarr.entrypoints=https"
+      - "traefik.http.routers.profilarr.rule=Host(`profilarr.${DOMAIN:?Set DOMAIN in .env}`)"
+      - "traefik.http.routers.profilarr.middlewares=secure-headers@file"
+      - "traefik.http.services.profilarr.loadbalancer.server.port=6868"
     depends_on:
       - radarr
       - sonarr

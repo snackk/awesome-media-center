@@ -23,6 +23,7 @@ SERVICES=(
   "profilarr:6868"
   "transmission:9091"
   "debrid:6500"
+  "picard:5800"
   "traefik:8082"
 )
 

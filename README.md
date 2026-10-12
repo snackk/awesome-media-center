@@ -17,8 +17,8 @@ Traefik acts as a reverse proxy for the **user-facing** services only, listening
 | **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl (`home.<domain>`) |
 | **Internet, router port forward** | `80`, `443` (Traefik), `51413` TCP/UDP (Transmission peers) |
 | **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
-| **Tailnet only, via Tailscale Services (HTTPS)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid` and `traefik` (dashboard) at `https://<name>.<tailnet>.ts.net`. Only devices in your tailnet reach them (see [Tailscale Services](#tailscale-services-internal-admin-uis)) |
-| **Localhost only (SSH tunnel fallback)** | The same UIs bound to `127.0.0.1`: Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik dashboard `8082` |
+| **Tailnet only, via Tailscale Services (HTTPS)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid`, `picard` and `traefik` (dashboard) at `https://<name>.<tailnet>.ts.net`. Only devices in your tailnet reach them (see [Tailscale Services](#tailscale-services-internal-admin-uis)) |
+| **Localhost only (SSH tunnel fallback)** | The same UIs bound to `127.0.0.1`: Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Picard `5800`, Portainer `9000`, Traefik dashboard `8082` |
 | **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning |
 
 Admin tools never go through Traefik. They are published to your tailnet by Tailscale (one name per service, see [Tailscale Services](#tailscale-services-internal-admin-uis)); as a fallback use an SSH tunnel, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas` and open `http://localhost:9000`.
@@ -31,7 +31,7 @@ Everything lives in a pool mounted at `/mnt/pool` (`media/`, `downloads/`, `conf
 
 ```sh
 cp .env.example .env
-for d in traefik portainer emby arr transmission debrid immich navidrome homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
+for d in traefik portainer emby arr transmission debrid immich navidrome picard homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
 ```
 
 Create the shared networks once: `docker network create web` (Traefik and public services) and `docker network create arr` (internal: *arr stack and download clients).
@@ -124,6 +124,10 @@ Music streaming server (`navidrome/`), compatible with Subsonic clients. Library
 
 Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so it can resolve `.local` (mDNS) ESPHome/Shelly devices through the host's `avahi-daemon`, which must be installed and running on the NAS. Because it is not on the `web` network, Traefik reaches it through the host gateway (`host.docker.internal:8080`, enabled by `extra_hosts` in `traefik/docker-compose.yml`). The routing is declared with Docker labels on the container, published at `https://home.${DOMAIN}` (the Netatmo OAuth redirect URI is `https://home.snackk-media.com/netatmo/callback`). The source project (`home-control-server`) carries the same labels in its own `docker-compose.yml`. Host networking binds port 8080 on every interface, so block it from the LAN with UFW and allow only Docker networks (see step 2.5 of the migration guide). Set `HC_USERNAME`, `HC_PASSWORD` and `HC_API_KEY` in `.env` and place the SSH key at `${SSH_KEY_PATH}` (e.g. `/mnt/pool/config/homecontrol/ssh/id_rsa`, readable by the container user).
 
+### MusicBrainz Picard
+
+Music tagger (`picard/`, [`jlesage/musicbrainz-picard`](https://github.com/jlesage/docker-musicbrainz-picard)) with its desktop UI served in the browser. It mounts the music library `${DATA_ROOT}/music` **read-write** (Picard rewrites tags; Navidrome mounts the same folder read-only and picks the changes up on its next scan); settings and plugins live in `${CONFIG_ROOT}/picard`. The UI has no login of its own, so it is only published to your tailnet as `https://picard.<tailnet>` (see [Tailscale Services](#tailscale-services-internal-admin-uis)) and bound to `127.0.0.1:5800`.
+
 ### Immich
 
 Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).
@@ -148,6 +152,7 @@ The internal admin UIs are not routed through Traefik or the Internet. Each one 
 | Profilarr | `https://profilarr.<tailnet>` | `6868` |
 | Transmission | `https://transmission.<tailnet>` | `9091` |
 | Debrid | `https://debrid.<tailnet>` | `6500` |
+| MusicBrainz Picard | `https://picard.<tailnet>` | `5800` |
 | Traefik dashboard | `https://traefik.<tailnet>` | `8082` |
 
 (`<tailnet>` is your tailnet DNS suffix, e.g. `tail1a2b3.ts.net`; set it as `TAILNET_DOMAIN` in `.env`.)

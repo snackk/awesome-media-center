@@ -17,11 +17,11 @@ Traefik acts as a reverse proxy for the **user-facing** services only, listening
 | **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl (`home.<domain>`) |
 | **Internet, router port forward** | `80`, `443` (Traefik), `51413` TCP/UDP (Transmission peers) |
 | **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
-| **Internet, via Traefik (admin tools, no extra auth)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid` and `traefik` (dashboard) at `<name>.<domain>`. Set authentication inside each app |
-| **Localhost only (SSH tunnel fallback)** | The same UIs are also bound to `127.0.0.1` (Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik `8082`) |
+| **Tailnet only, via Tailscale Services (HTTPS)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid` and `traefik` (dashboard) at `https://<name>.<tailnet>.ts.net`. Only devices in your tailnet reach them (see [Tailscale Services](#tailscale-services-internal-admin-uis)) |
+| **Localhost only (SSH tunnel fallback)** | The same UIs bound to `127.0.0.1`: Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Portainer `9000`, Traefik dashboard `8082` |
 | **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning |
 
-Admin tools are published through Traefik at `<name>.<domain>` with HTTPS and **no extra authentication layer**: each app must have its own login enabled (Portainer admin, *arr "Authentication: Forms", Transmission/Debrid credentials). Each hostname needs a DNS record pointing to the router. The SSH tunnel on `127.0.0.1` still works, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas`.
+Admin tools never go through Traefik. They are published to your tailnet by Tailscale (one name per service, see [Tailscale Services](#tailscale-services-internal-admin-uis)); as a fallback use an SSH tunnel, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas` and open `http://localhost:9000`.
 
 See [docs/MIGRATION-UGREEN-DXP2800.md](docs/MIGRATION-UGREEN-DXP2800.md) for the NAS setup (ext4 + MergerFS, Intellipark) and the migration guide.
 
@@ -133,6 +133,35 @@ Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits on
 ### Tailscale
 
 VPN (`tailscale/`) that gives you secure remote access to the NAS, the LAN and the internal-only services (such as the *arr UIs, via SSH tunnel) without opening more router ports. It runs with `network_mode: host`, `NET_ADMIN` and `/dev/net/tun`, and advertises your LAN (`TS_ROUTES`) as a subnet router, so it is not routed through Traefik. Set `TS_AUTHKEY` in `.env` for the first start (state is kept in `${CONFIG_ROOT}/tailscale`), enable IP forwarding on the host, approve the route in the Tailscale admin console, and allow UDP `41641` in UFW (optionally forward it on the router). See step 10.1 of the migration guide.
+
+
+#### <a name="tailscale-services-internal-admin-uis"></a> Tailscale Services (internal admin UIs)
+
+The internal admin UIs are not routed through Traefik or the Internet. Each one is published as its own [Tailscale Service](https://tailscale.com/docs/features/tailscale-services), with a name and a certificate issued by Tailscale, reachable only from devices in your tailnet (at home or away, with Tailscale on):
+
+| Service | URL | Local port |
+| --- | --- | --- |
+| Portainer | `https://portainer.<tailnet>` | `9000` |
+| Radarr | `https://radarr.<tailnet>` | `7878` |
+| Sonarr | `https://sonarr.<tailnet>` | `8989` |
+| Prowlarr | `https://prowlarr.<tailnet>` | `9696` |
+| Profilarr | `https://profilarr.<tailnet>` | `6868` |
+| Transmission | `https://transmission.<tailnet>` | `9091` |
+| Debrid | `https://debrid.<tailnet>` | `6500` |
+| Traefik dashboard | `https://traefik.<tailnet>` | `8082` |
+
+(`<tailnet>` is your tailnet DNS suffix, e.g. `tail1a2b3.ts.net`; set it as `TAILNET_DOMAIN` in `.env`.)
+
+Setup (Services are a recent Tailscale feature: check their current status and plan limits first):
+
+1. Install Tailscale on your devices and bring the `tailscale` stack up (`TS_AUTHKEY`, `TS_HOSTNAME` in `.env`).
+2. **Tag the NAS node**: create the tag in the ACL policy (`tagOwners`), create the auth key with that tag, and set `TS_EXTRA_ARGS=--advertise-tags=tag:nas`.
+3. In the admin console enable **MagicDNS** and **HTTPS Certificates** (DNS page). The machine name becomes visible in public certificate-transparency logs.
+4. **Create one Service per name** in the admin console (Services page) with HTTPS/443, and let the tagged node host them, either by approving the host or with `autoApprovers` in the ACL policy.
+5. On the NAS run `./tailscale/services.sh` to map every Service to its local port, then check with `docker exec tailscale tailscale serve status`.
+6. Remove the old public DNS records for these names (the CNAMEs are no longer used).
+
+Notes: Profilarr's `ORIGIN` is set to `https://profilarr.${TAILNET_DOMAIN}`, so its forms only work through that URL (through the `localhost:6868` SSH tunnel its form submits may be rejected as cross-site). Do **not** use `tailscale funnel`: it would expose the services to the Internet.
 
 ## Upgrading Services
 

@@ -31,8 +31,8 @@ services:
 
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/homecontrol/state:/var/lib/homecontrol
-      - ${SSH_KEY_PATH:?Set SSH_KEY_PATH in .env}:/home/app/.ssh/id_rsa:ro
       - /run/avahi-daemon/socket:/run/avahi-daemon/socket
+      - ${DATA_ROOT}/:/host/data:ro
 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

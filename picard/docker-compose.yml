@@ -1,0 +1,23 @@
+services:
+  picard:
+    image: jlesage/musicbrainz-picard:latest
+    container_name: picard
+    restart: unless-stopped
+    ports:
+      # Web UI (noVNC in the browser): localhost only. Published to the tailnet only, as the
+      # Tailscale Service picard.<tailnet> (tailscale/services.sh). It has no login of its own.
+      - "127.0.0.1:5800:5800"
+    environment:
+      # Run as the owner of the library so tag edits keep the files owned by your user
+      USER_ID: ${PUID:?Set PUID in .env}
+      GROUP_ID: ${PGID:?Set PGID in .env}
+      TZ: ${TZ:?Set TZ in .env}
+    volumes:
+      # Picard settings, plugins and cache
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/picard:/config
+      # Music library (read-write: Picard rewrites tags). Navidrome mounts the same folder read-only.
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/music:/storage:rw
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

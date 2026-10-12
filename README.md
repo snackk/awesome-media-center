@@ -128,6 +128,10 @@ Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so
 
 Music tagger (`picard/`, [`jlesage/musicbrainz-picard`](https://github.com/jlesage/docker-musicbrainz-picard)) with its desktop UI served in the browser. It mounts the music library `${DATA_ROOT}/music` **read-write** (Picard rewrites tags; Navidrome mounts the same folder read-only and picks the changes up on its next scan); settings and plugins live in `${CONFIG_ROOT}/picard`. The UI has no login of its own, so it is only published to your tailnet as `https://picard.<tailnet>` (see [Tailscale Services](#tailscale-services-internal-admin-uis)) and bound to `127.0.0.1:5800`.
 
+### SMB share (Samba)
+
+File share of the media folders for Mac, iPhone and Windows. Samba runs on the NAS host (not in Docker); the config and the setup steps are in [`samba/`](samba/README.md). It exposes `/media/data` as `media` **without** `configs/`, reachable only from the home LAN and over Tailscale (`smb://snackk-nas.<tailnet>/media`), never from the Internet.
+
 ### Immich
 
 Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).

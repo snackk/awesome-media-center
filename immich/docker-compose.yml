@@ -13,8 +13,6 @@ services:
     image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:?Set IMMICH_VERSION in .env}
     container_name: immich_server
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:2283:2283"
     networks:
       - web
       - immich

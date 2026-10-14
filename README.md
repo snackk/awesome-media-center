@@ -76,6 +76,8 @@ Reverse proxy that handles SSL termination and routing for all services.
 
 The dashboard is not published through Traefik: it listens on `127.0.0.1:8082` of the host (`entryPoints.traefik` in `traefik/data/traefik.yml`), so there is no dashboard hostname, no basic auth and no credentials to keep in the repository. Open it with `ssh -L 8082:127.0.0.1:8082 user@nas` and browse `http://localhost:8082`.
 
+TLS uses `sniStrict: true` (`tls.options.default` in `traefik/data/config.yml`): connections without SNI or with an unknown hostname (e.g. scanners hitting the bare IP) get a failed TLS handshake instead of Traefik's default certificate and `404`, so the proxy is not fingerprinted. Side effect: `https://<nas-ip>` no longer works, always use the hostname. Restart Traefik after changing it (`docker compose restart traefik`).
+
 ### <a name="portainer"></a> Portainer
 
 Web-based Docker management UI. It has full access to the Docker socket, so it is **not** exposed: it listens on `127.0.0.1:9000` only (SSH tunnel or Tailscale).
@@ -136,7 +138,7 @@ File share of the media folders for Mac, iPhone and Windows. Samba runs on the N
 
 Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).
 
-Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits only). Then create the admin account at `https://immich.snackk-media.com`.
+Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits only). Then create the admin account at `https://immich.snackk-media.com`. The server publishes no host port: it is reachable only through Traefik.
 
 ### Tailscale
 

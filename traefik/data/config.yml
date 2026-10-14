@@ -14,4 +14,7 @@ tls:
   options:
     default:
       minVersion: VersionTLS12
+      # Abort the handshake when the client sends no SNI or an unknown one, so
+      # scanners hitting the bare IP get no certificate and no 404 to fingerprint
+      sniStrict: true
 

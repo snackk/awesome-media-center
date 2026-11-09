@@ -13,7 +13,7 @@ services:
       - arr
     volumes:
       - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/transmission:/config
-      - ${DATA_ROOT:?Set DATA_ROOT in .env}/downloads:/downloads
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}:/data
     environment:
       - "PUID=${PUID:?Set PUID in .env}"
       - "PGID=${PGID:?Set PGID in .env}"

@@ -5,8 +5,8 @@ services:
     restart: unless-stopped
     ports:
       # BitTorrent peer port must be reachable from the Internet (forward it on the router)
-      - "51413:51413"
-      - "51413:51413/udp"
+      - "49153:49153"
+      - "49153:49153/udp"
       # Web UI: localhost only (SSH tunnel / Tailscale), not exposed through Traefik
       - "127.0.0.1:9091:9091"
     networks:

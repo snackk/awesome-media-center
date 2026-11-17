@@ -514,6 +514,9 @@ On the NAS, in this order:
 ```sh
 cd ~/awesome-media-center
 
+(cd crowdsec     && docker compose up -d)   # must be healthy BEFORE traefik (its bouncer needs a key from here)
+# docker exec crowdsec cscli bouncers add traefik-bouncer -o raw
+# -> put the printed value in .env as CROWDSEC_BOUNCER_KEY, then continue
 (cd traefik      && docker compose up -d)
 (cd portainer    && docker compose up -d)
 (cd emby         && docker compose up -d)
@@ -610,6 +613,9 @@ Because the paths inside the containers changed (everything is now under `/data`
 - [ ] `sudo idle3ctl -g /dev/sdX` reports the timer disabled
 - [ ] `Load_Cycle_Count` is not increasing: `sudo smartctl -A /dev/sdX`
 - [ ] `sudo ufw status` is active and `curl -m 3 http://<nas-ip>:8080` from the LAN times out (HomeControl only via Traefik)
+- [ ] `docker exec crowdsec cscli metrics` shows a non-zero "Lines read" count for the `traefik` acquisition source
+- [ ] `docker exec crowdsec cscli decisions add --ip 198.51.100.1 --duration 1m --reason "manual-test"` then `curl -H "X-Forwarded-For: 198.51.100.1" https://emby.snackk-media.com/` returns `403`, and the normal response again once the decision expires
+- [ ] `curl -m 3 http://<nas-ip>:8080` (CrowdSec LAPI) times out from another LAN machine — it must only be reachable by Traefik via the `web` Docker network
 - [ ] `docker exec tailscale tailscale status` shows the NAS online, and the subnet route is approved
 - [ ] From a device on the tailnet (mobile data), you can reach `ssh <user>@<nas-tailscale-ip>`
 - [ ] `docker compose version` works for your user without `sudo` (you are in the `docker` group)

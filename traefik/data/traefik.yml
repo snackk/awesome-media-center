@@ -10,6 +10,30 @@ ping: {}
 log:
   level: INFO
 
+# No filePath: writes JSON lines to stdout, rotated by Docker like every other
+# container's logs (logging.options in docker-compose.yml). Headers are dropped
+# by default so secrets (Authorization, cookies, API keys in query strings) never
+# land in the log that CrowdSec reads. Consumed by crowdsec/acquis.yaml.
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        Content-Type: keep
+
+# CrowdSec bouncer: enforces decisions made by the crowdsec container (see
+# crowdsec/docker-compose.yml). The middleware itself is declared as Docker
+# labels on the traefik service (traefik/docker-compose.yml), same as every
+# other dynamic config in this project; only the plugin module/version is
+# static config and must live here.
+experimental:
+  plugins:
+    bouncer:
+      moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      version: v1.4.2
+
 entryPoints:
   traefik:
     address: ":8082"

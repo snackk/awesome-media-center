@@ -22,7 +22,7 @@ services:
       - "traefik.docker.network=web"
       - "traefik.http.routers.navidrome.entrypoints=https"
       - "traefik.http.routers.navidrome.rule=Host(`navidrome.${DOMAIN:?Set DOMAIN in .env}`)"
-      - "traefik.http.routers.navidrome.middlewares=secure-headers@file"
+      - "traefik.http.routers.navidrome.middlewares=crowdsec@docker,secure-headers@file"
       - "traefik.http.services.navidrome.loadbalancer.server.port=4533"
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:4533/ping || exit 1

@@ -1,0 +1,10 @@
+# Tells the crowdsec agent to read Traefik's logs directly via the Docker API
+# (no shared log volume/file needed). Traefik writes JSON access logs to stdout
+# (traefik/data/traefik.yml); "type: traefik" selects the matching parser from
+# the crowdsecurity/traefik collection (installed via COLLECTIONS in
+# docker-compose.yml).
+source: docker
+container_name:
+  - traefik
+labels:
+  type: traefik

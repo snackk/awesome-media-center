@@ -1,0 +1,6 @@
+# Tells the crowdsec agent to read Traefik's logs directly via the Docker API
+source: docker
+container_name:
+  - traefik
+labels:
+  type: traefik

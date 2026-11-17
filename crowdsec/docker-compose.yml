@@ -1,0 +1,31 @@
+services:
+  crowdsec:
+    image: crowdsecurity/crowdsec:latest
+    container_name: crowdsec
+    restart: unless-stopped
+    networks:
+      - web
+    environment:
+      COLLECTIONS: "crowdsecurity/traefik crowdsecurity/http-cve crowdsecurity/base-http-scenarios"
+      TZ: ${TZ:?Set TZ in .env}
+    volumes:
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/crowdsec/config:/etc/crowdsec
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/crowdsec/data:/var/lib/crowdsec/data
+      - ./acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "cscli", "lapi", "status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  web:
+    external: true

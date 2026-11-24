@@ -23,7 +23,7 @@ services:
       - "traefik.docker.network=web"
       - "traefik.http.routers.emby.entrypoints=https"
       - "traefik.http.routers.emby.rule=Host(`emby.${DOMAIN:?Set DOMAIN in .env}`)"
-      - "traefik.http.routers.emby.middlewares=crowdsec@docker,secure-headers@file"
+      - "traefik.http.routers.emby.middlewares=crowdsec@file,secure-headers@file"
       - "traefik.http.services.emby.loadbalancer.server.port=8096"
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:8096/System/Ping || exit 1

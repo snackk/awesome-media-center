@@ -3,12 +3,22 @@ services:
     image: portainer/portainer-ce:latest
     container_name: portainer
     restart: unless-stopped
+    # Must match the bind mount's path below (both sides), so Portainer's own data
+    # directory inside the container resolves to the same absolute path on the host.
+    command: ["--data", "${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/portainer"]
     ports:
       # Admin tool (full Docker access): localhost only, use an SSH tunnel / Tailscale
       - "127.0.0.1:9000:9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/portainer:/data
+      # Same absolute path on both sides (not /data): Portainer writes bind-mount
+      # sources for GitOps stacks using ITS OWN view of this path. The actual mount
+      # is then created by the host's dockerd (via docker.sock), which only sees the
+      # host filesystem. A mismatched path (e.g. host:/data container) makes dockerd
+      # resolve relative compose volumes against a /data that doesn't exist on the
+      # host, silently auto-creating empty directories instead of mounting the real
+      # files (e.g. crowdsec/acquis.yaml ends up mounted as an empty directory).
+      - ${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/portainer:${CONFIG_ROOT:?Set CONFIG_ROOT in .env}/portainer
     security_opt:
       - no-new-privileges:true
     logging:

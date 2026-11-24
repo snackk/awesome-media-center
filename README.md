@@ -93,6 +93,8 @@ Access logging is on (`accessLog` in `traefik/data/traefik.yml`): JSON lines to 
 
 Web-based Docker management UI. It has full access to the Docker socket, so it is **not** exposed: it listens on `127.0.0.1:9000` only (SSH tunnel or Tailscale).
 
+Its data volume is bind-mounted at the *same absolute path* on both sides (`${CONFIG_ROOT}/portainer` on the host and inside the container, via `--data`), not the image's default `/data` — see [Problems](#problems) for why that matters for any stack deployed through the Portainer UI (Web editor, Upload or Repository).
+
 ### Emby
 
 Media server for movies and TV shows (`emby/`). Only Emby lives in this stack, so it can be upgraded or restarted without touching the automation tools.
@@ -268,6 +270,14 @@ id -g  # GID
 ```sh
 chmod 600 ${CONFIG_ROOT}/traefik/acme.json
 ```
+
+---
+
+**A stack deployed from the Portainer UI fails with `read <path>: is a directory` for a file that is tracked in Git and clearly exists in the repo** (e.g. `crowdsec/acquis.yaml`):
+
+This happens when Portainer's own data volume is bind-mounted to a different path inside its container than on the host (e.g. `${CONFIG_ROOT}/portainer:/data`). Portainer computes bind-mount *sources* for the stacks it manages (relative compose volumes like `./acquis.yaml`) using its own internal view of that path (`/data/compose/<id>/...`). But the actual mount is created by the **host's** `dockerd` through `docker.sock`, which only understands host paths — `/data/compose/<id>/...` means nothing there, so it silently auto-creates an empty directory and mounts that instead of the real file.
+
+Fix: Portainer's volume must use the *same absolute path* on both sides (`portainer/docker-compose.yml` does this via `${CONFIG_ROOT}/portainer:${CONFIG_ROOT}/portainer` plus `command: ["--data", "${CONFIG_ROOT}/portainer"]`). If Portainer was already deployed with the old `/data` mapping, any stack it deployed in the meantime may have left behind empty phantom directories on the host at the wrong path (check `docker inspect <container> --format '{{json .Mounts}}'` for a bind `Source` that doesn't match a real file). Recreate the Portainer container with the corrected compose file first, then **delete and recreate** (not just redeploy/update) any stack that hit this — redeploying in place reuses the existing clone and won't fix a mount that's already wrong.
 
 ---
 

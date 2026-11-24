@@ -53,7 +53,7 @@ cd crowdsec && docker compose up -d
 docker exec crowdsec cscli bouncers add traefik-bouncer -o raw
 ```
 
-Put the printed value in `.env` as `CROWDSEC_BOUNCER_KEY` before the next step.
+Write the printed value (no trailing newline) to `${CONFIG_ROOT}/traefik/crowdsec-bouncer-key` before the next step — see [CrowdSec](#crowdsec) for why this is a file and not a `.env` variable.
 
 **2. Start Traefik:**
 
@@ -155,7 +155,7 @@ Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits on
 
 ### <a name="crowdsec"></a> CrowdSec
 
-Detects and blocks suspicious requests (scanning, brute-force, known CVE probes) against every public router (`crowdsec/`). It reads Traefik's access log directly through the Docker API (`acquis.yaml`'s `source: docker`) — no shared log file or volume — using the `crowdsecurity/traefik`, `crowdsecurity/http-cve` and `crowdsecurity/base-http-scenarios` collections. Traefik enforces its decisions via the `crowdsec-bouncer-traefik-plugin` middleware (`crowdsec@docker`, defined as labels on the `traefik` service, `traefik/docker-compose.yml`).
+Detects and blocks suspicious requests (scanning, brute-force, known CVE probes) against every public router (`crowdsec/`). It reads Traefik's access log directly through the Docker API (`acquis.yaml`'s `source: docker`) — no shared log file or volume — using the `crowdsecurity/traefik`, `crowdsecurity/http-cve` and `crowdsecurity/base-http-scenarios` collections. Traefik enforces its decisions via the `crowdsec-bouncer-traefik-plugin` middleware (`crowdsec@docker`, defined in `traefik/data/config.yml` — the file provider, not Docker labels on the `traefik` service itself; see that file for why).
 
 The LAPI (port 8080) publishes **no host port**: it is reached only by Traefik via Docker DNS on the `web` network (`http://crowdsec:8080`), the same "never published, internal network only" treatment as Immich's database. The container does need read access to `/var/run/docker.sock` to tail container logs — the same trade-off Portainer already makes with full socket access; `acquis.yaml` limits what it actually *reads* to the `traefik` container, but the socket permission itself is broader than that.
 
@@ -163,8 +163,8 @@ The LAPI (port 8080) publishes **no host port**: it is reached only by Traefik v
 
 1. `cd crowdsec && docker compose up -d` and wait for it to report healthy (`docker compose ps`).
 2. Generate the bouncer key: `docker exec crowdsec cscli bouncers add traefik-bouncer -o raw`.
-3. Put that value in `.env` as `CROWDSEC_BOUNCER_KEY`.
-4. Only then `cd traefik && docker compose up -d` (or restart it if already running) — it refuses to start with a placeholder key.
+3. Write that value (no trailing newline) to `${CONFIG_ROOT}/traefik/crowdsec-bouncer-key` — a file, not a `.env` variable, because `traefik/data/config.yml` is read by Traefik's file provider, which doesn't substitute `${VAR}` the way compose labels do.
+4. Only then `cd traefik && docker compose up -d` (or restart it if already running) — it reads the key from that file at request time, so it must exist first.
 
 A tailnet-only web dashboard (`cscli dashboard`, published the same way as Portainer/Radarr/etc.) is a planned follow-up, not yet implemented — its exact setup command/image has changed across CrowdSec releases and needs checking against the installed version (`docker exec crowdsec cscli version`) before wiring it in.
 
@@ -278,6 +278,14 @@ chmod 600 ${CONFIG_ROOT}/traefik/acme.json
 This happens when Portainer's own data volume is bind-mounted to a different path inside its container than on the host (e.g. `${CONFIG_ROOT}/portainer:/data`). Portainer computes bind-mount *sources* for the stacks it manages (relative compose volumes like `./acquis.yaml`) using its own internal view of that path (`/data/compose/<id>/...`). But the actual mount is created by the **host's** `dockerd` through `docker.sock`, which only understands host paths — `/data/compose/<id>/...` means nothing there, so it silently auto-creates an empty directory and mounts that instead of the real file.
 
 Fix: Portainer's volume must use the *same absolute path* on both sides (`portainer/docker-compose.yml` does this via `${CONFIG_ROOT}/portainer:${CONFIG_ROOT}/portainer` plus `command: ["--data", "${CONFIG_ROOT}/portainer"]`). If Portainer was already deployed with the old `/data` mapping, any stack it deployed in the meantime may have left behind empty phantom directories on the host at the wrong path (check `docker inspect <container> --format '{{json .Mounts}}'` for a bind `Source` that doesn't match a real file). Recreate the Portainer container with the corrected compose file first, then **delete and recreate** (not just redeploy/update) any stack that hit this — redeploying in place reuses the existing clone and won't fix a mount that's already wrong.
+
+---
+
+**Traefik keeps failing an ACME order for a nonsense domain like `traefik-traefik`** (`Domain name needs at least one dot`), with a matching router visible at `GET http://127.0.0.1:8082/api/http/routers/https-traefik-traefik@docker`:
+
+Caused by `traefik.enable=true` on the `traefik` service itself with no explicit router label for it. Traefik's Docker provider auto-creates one router per entrypoint from `defaultRule` (`Host(\`{{ normalize .Name }}\`)`) for any enabled container that doesn't define its own router — here that's the Compose project+service name doubled up, routed back to Traefik's own `:80` entrypoint. It doesn't expose anything sensitive (it loops into Traefik itself, not the dashboard), but it's a dead, publicly-reachable router that burns an ACME order for nothing.
+
+Fix: don't put `traefik.enable=true` (or any `traefik.http.*` label) on the `traefik` service at all — define middlewares that need to apply to *other* services' routers (like `crowdsec`) in `traefik/data/config.yml` (file provider) instead, the same way `secure-headers` already is.
 
 ---
 

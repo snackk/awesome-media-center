@@ -38,7 +38,8 @@ services:
         max-size: "10m"
         max-file: "3"
     # No "traefik.enable=true" / router labels here: the "crowdsec" middleware (used as
-    # crowdsec@docker from every public router's "middlewares" label) is defined in
+    # crowdsec@file -- note the @file suffix, it lives in the file provider, not
+    # @docker -- from every public router's "middlewares" label) is defined in
     # config.yml instead, via the file provider. Labeling the traefik service itself
     # was tried first, but traefik.enable=true with no explicit router for this
     # container makes Traefik's Docker provider auto-create one per entrypoint from

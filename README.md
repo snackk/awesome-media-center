@@ -8,7 +8,7 @@ Media center using Docker Compose with Traefik, CrowdSec, Portainer, Emby, Radar
 
 ## Overview
 
-Traefik acts as a reverse proxy for the **user-facing** services only, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each exposed service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. Every public router runs two middlewares, in order: `crowdsec@docker` (blocks requests CrowdSec has flagged — see [CrowdSec](#crowdsec)), then the shared `secure-headers@file` middleware (`traefik/data/config.yml`).
+Traefik acts as a reverse proxy for the **user-facing** services only, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each exposed service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. Every public router runs two middlewares, in order: `crowdsec@file` (blocks requests CrowdSec has flagged — see [CrowdSec](#crowdsec)), then the shared `secure-headers@file` middleware (both defined in `traefik/data/config.yml`). Both carry the `@file` suffix because they're defined in the file provider, not as Docker labels — a router defined via labels (`@docker`) must still name the provider a cross-provider middleware actually lives in.
 
 ### What is exposed
 
@@ -155,7 +155,7 @@ Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits on
 
 ### <a name="crowdsec"></a> CrowdSec
 
-Detects and blocks suspicious requests (scanning, brute-force, known CVE probes) against every public router (`crowdsec/`). It reads Traefik's access log directly through the Docker API (`acquis.yaml`'s `source: docker`) — no shared log file or volume — using the `crowdsecurity/traefik`, `crowdsecurity/http-cve` and `crowdsecurity/base-http-scenarios` collections. Traefik enforces its decisions via the `crowdsec-bouncer-traefik-plugin` middleware (`crowdsec@docker`, defined in `traefik/data/config.yml` — the file provider, not Docker labels on the `traefik` service itself; see that file for why).
+Detects and blocks suspicious requests (scanning, brute-force, known CVE probes) against every public router (`crowdsec/`). It reads Traefik's access log directly through the Docker API (`acquis.yaml`'s `source: docker`) — no shared log file or volume — using the `crowdsecurity/traefik`, `crowdsecurity/http-cve` and `crowdsecurity/base-http-scenarios` collections. Traefik enforces its decisions via the `crowdsec-bouncer-traefik-plugin` middleware (`crowdsec@file`, defined in `traefik/data/config.yml` — the file provider, not Docker labels on the `traefik` service itself; see that file for why).
 
 The LAPI (port 8080) publishes **no host port**: it is reached only by Traefik via Docker DNS on the `web` network (`http://crowdsec:8080`), the same "never published, internal network only" treatment as Immich's database. The container does need read access to `/var/run/docker.sock` to tail container logs — the same trade-off Portainer already makes with full socket access; `acquis.yaml` limits what it actually *reads* to the `traefik` container, but the socket permission itself is broader than that.
 
@@ -286,6 +286,14 @@ Fix: Portainer's volume must use the *same absolute path* on both sides (`portai
 Caused by `traefik.enable=true` on the `traefik` service itself with no explicit router label for it. Traefik's Docker provider auto-creates one router per entrypoint from `defaultRule` (`Host(\`{{ normalize .Name }}\`)`) for any enabled container that doesn't define its own router — here that's the Compose project+service name doubled up, routed back to Traefik's own `:80` entrypoint. It doesn't expose anything sensitive (it loops into Traefik itself, not the dashboard), but it's a dead, publicly-reachable router that burns an ACME order for nothing.
 
 Fix: don't put `traefik.enable=true` (or any `traefik.http.*` label) on the `traefik` service at all — define middlewares that need to apply to *other* services' routers (like `crowdsec`) in `traefik/data/config.yml` (file provider) instead, the same way `secure-headers` already is.
+
+---
+
+**A service's router fails with `middleware "crowdsec@docker" does not exist`** even though the middleware is clearly defined and healthy elsewhere:
+
+Traefik middleware references are qualified by *provider*, not just name: `crowdsec@docker` and `crowdsec@file` are different identifiers even if both existed. Every middleware referenced in `traefik.http.routers.<name>.middlewares=...` must name the provider it's actually defined in, regardless of which provider the *router* itself comes from. `crowdsec` lives in `traefik/data/config.yml` (the file provider), so every service's label must say `crowdsec@file` — `crowdsec@docker` (a leftover from when it used to be defined via Docker labels) will never resolve.
+
+Fix: `grep -rn "crowdsec@docker"` across the repo and replace every match with `crowdsec@file`, then recreate the affected services.
 
 ---
 

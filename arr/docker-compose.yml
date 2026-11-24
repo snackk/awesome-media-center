@@ -117,7 +117,7 @@ services:
       - "traefik.docker.network=web"
       - "traefik.http.routers.seerr.entrypoints=https"
       - "traefik.http.routers.seerr.rule=Host(`seerr.${DOMAIN:?Set DOMAIN in .env}`)"
-      - "traefik.http.routers.seerr.middlewares=crowdsec@docker,secure-headers@file"
+      - "traefik.http.routers.seerr.middlewares=crowdsec@file,secure-headers@file"
       - "traefik.http.services.seerr.loadbalancer.server.port=5055"
     healthcheck:
       test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1

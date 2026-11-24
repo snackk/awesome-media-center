@@ -15,7 +15,7 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.homecontrol.entrypoints=https"
       - "traefik.http.routers.homecontrol.rule=Host(`home.${DOMAIN:?Set DOMAIN in .env}`)"
-      - "traefik.http.routers.homecontrol.middlewares=crowdsec@docker,secure-headers@file"
+      - "traefik.http.routers.homecontrol.middlewares=crowdsec@file,secure-headers@file"
       - "traefik.http.services.homecontrol.loadbalancer.server.port=8080"
 
     environment:

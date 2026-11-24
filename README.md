@@ -4,11 +4,11 @@
   <img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_%28container_engine%29_logo.png" alt="Docker Logo">
 </p>
 
-Media center using Docker Compose with Traefik, Portainer, Emby, Radarr, Sonarr, Prowlarr, Profilarr, FlareSolverr, Seerr, Debrid, Transmission, Immich, Navidrome, HomeControl, and Tailscale.
+Media center using Docker Compose with Traefik, CrowdSec, Portainer, Emby, Radarr, Sonarr, Prowlarr, Profilarr, FlareSolverr, Seerr, Debrid, Transmission, Immich, Navidrome, HomeControl, and Tailscale.
 
 ## Overview
 
-Traefik acts as a reverse proxy for the **user-facing** services only, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each exposed service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. A shared `secure-headers` middleware (`traefik/data/config.yml`) is applied to every router.
+Traefik acts as a reverse proxy for the **user-facing** services only, listening on ports 80 and 443. Port 80 redirects all requests to 443 globally (configured on the entrypoint in `traefik/data/traefik.yml`). Each exposed service is registered via Docker labels with a single HTTPS router and automatically gets an SSL certificate managed by Traefik using Let's Encrypt. Every public router runs two middlewares, in order: `crowdsec@docker` (blocks requests CrowdSec has flagged — see [CrowdSec](#crowdsec)), then the shared `secure-headers@file` middleware (`traefik/data/config.yml`).
 
 ### What is exposed
 
@@ -19,7 +19,7 @@ Traefik acts as a reverse proxy for the **user-facing** services only, listening
 | **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
 | **Tailnet only, via Tailscale Services (HTTPS)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid`, `picard` and `traefik` (dashboard) at `https://<name>.<tailnet>.ts.net`. Only devices in your tailnet reach them (see [Tailscale Services](#tailscale-services-internal-admin-uis)) |
 | **Localhost only (SSH tunnel fallback)** | The same UIs bound to `127.0.0.1`: Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Picard `5800`, Portainer `9000`, Traefik dashboard `8082` |
-| **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning |
+| **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning, CrowdSec LAPI (reached by Traefik via Docker DNS on the `web` network only, never published) |
 
 Admin tools never go through Traefik. They are published to your tailnet by Tailscale (one name per service, see [Tailscale Services](#tailscale-services-internal-admin-uis)); as a fallback use an SSH tunnel, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas` and open `http://localhost:9000`.
 
@@ -31,7 +31,7 @@ Everything lives in a pool mounted at `/mnt/pool` (`media/`, `downloads/`, `conf
 
 ```sh
 cp .env.example .env
-for d in traefik portainer emby arr transmission debrid immich navidrome picard homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
+for d in traefik crowdsec portainer emby arr transmission debrid immich navidrome picard homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
 ```
 
 Create the shared networks once: `docker network create web` (Traefik and public services) and `docker network create arr` (internal: *arr stack and download clients).
@@ -44,21 +44,30 @@ Create the shared networks once: `docker network create web` (Traefik and public
 
 ## Installation
 
-Each service has its own directory containing a `docker-compose.yml`. Start by deploying Traefik (the reverse proxy) and Portainer (container management UI). The remaining services can be deployed individually via CLI or managed through Portainer.
+Each service has its own directory containing a `docker-compose.yml`. Start with CrowdSec, then Traefik (the reverse proxy — its bouncer middleware needs CrowdSec's key first, see [CrowdSec](#crowdsec)), then Portainer (container management UI). The remaining services can be deployed individually via CLI or managed through Portainer.
 
-**1. Start Traefik:**
+**1. Start CrowdSec, then generate and set the Traefik bouncer key:**
+
+```sh
+cd crowdsec && docker compose up -d
+docker exec crowdsec cscli bouncers add traefik-bouncer -o raw
+```
+
+Put the printed value in `.env` as `CROWDSEC_BOUNCER_KEY` before the next step.
+
+**2. Start Traefik:**
 
 ```sh
 cd traefik && docker compose up -d
 ```
 
-**2. Start Portainer:**
+**3. Start Portainer:**
 
 ```sh
 cd portainer && docker compose up -d
 ```
 
-**3. Deploy remaining services:**
+**4. Deploy remaining services:**
 
 ```sh
 cd <service> && docker compose up -d
@@ -77,6 +86,8 @@ Reverse proxy that handles SSL termination and routing for all services.
 The dashboard is not published through Traefik: it listens on `127.0.0.1:8082` of the host (`entryPoints.traefik` in `traefik/data/traefik.yml`), so there is no dashboard hostname, no basic auth and no credentials to keep in the repository. Open it with `ssh -L 8082:127.0.0.1:8082 user@nas` and browse `http://localhost:8082`.
 
 TLS uses `sniStrict: true` (`tls.options.default` in `traefik/data/config.yml`): connections without SNI or with an unknown hostname (e.g. scanners hitting the bare IP) get a failed TLS handshake instead of Traefik's default certificate and `404`, so the proxy is not fingerprinted. Side effect: `https://<nas-ip>` no longer works, always use the hostname. Restart Traefik after changing it (`docker compose restart traefik`).
+
+Access logging is on (`accessLog` in `traefik/data/traefik.yml`): JSON lines to stdout, rotated by Docker like every other container (no `filePath`, no extra volume). Headers are dropped by default (`fields.headers.defaultMode: drop`) so `Authorization`, cookies and any API keys sent as headers never reach the log — only `User-Agent` and `Content-Type` are kept. This log is CrowdSec's only data source (see [CrowdSec](#crowdsec)).
 
 ### <a name="portainer"></a> Portainer
 
@@ -139,6 +150,21 @@ File share of the media folders for Mac, iPhone and Windows. Samba runs on the N
 Self-hosted photo and video manager (`immich/`): server, machine learning, PostgreSQL (with vector extension) and Valkey (Redis). Photos are stored in `${DATA_ROOT}/photos`; the database lives in `${CONFIG_ROOT}/immich/postgres` (keep it on a local disk, never on a network share).
 
 Before the first start set `IMMICH_DB_PASSWORD` in `.env` (letters and digits only). Then create the admin account at `https://immich.snackk-media.com`. The server publishes no host port: it is reachable only through Traefik.
+
+### <a name="crowdsec"></a> CrowdSec
+
+Detects and blocks suspicious requests (scanning, brute-force, known CVE probes) against every public router (`crowdsec/`). It reads Traefik's access log directly through the Docker API (`acquis.yaml`'s `source: docker`) — no shared log file or volume — using the `crowdsecurity/traefik`, `crowdsecurity/http-cve` and `crowdsecurity/base-http-scenarios` collections. Traefik enforces its decisions via the `crowdsec-bouncer-traefik-plugin` middleware (`crowdsec@docker`, defined as labels on the `traefik` service, `traefik/docker-compose.yml`).
+
+The LAPI (port 8080) publishes **no host port**: it is reached only by Traefik via Docker DNS on the `web` network (`http://crowdsec:8080`), the same "never published, internal network only" treatment as Immich's database. The container does need read access to `/var/run/docker.sock` to tail container logs — the same trade-off Portainer already makes with full socket access; `acquis.yaml` limits what it actually *reads* to the `traefik` container, but the socket permission itself is broader than that.
+
+**First-start order matters** (there is a bootstrap dependency the two stacks can't express to each other, since they are separate Compose projects):
+
+1. `cd crowdsec && docker compose up -d` and wait for it to report healthy (`docker compose ps`).
+2. Generate the bouncer key: `docker exec crowdsec cscli bouncers add traefik-bouncer -o raw`.
+3. Put that value in `.env` as `CROWDSEC_BOUNCER_KEY`.
+4. Only then `cd traefik && docker compose up -d` (or restart it if already running) — it refuses to start with a placeholder key.
+
+A tailnet-only web dashboard (`cscli dashboard`, published the same way as Portainer/Radarr/etc.) is a planned follow-up, not yet implemented — its exact setup command/image has changed across CrowdSec releases and needs checking against the installed version (`docker exec crowdsec cscli version`) before wiring it in.
 
 ### Tailscale
 

@@ -10,6 +10,22 @@ ping: {}
 log:
   level: INFO
 
+accessLog:
+  format: json
+  fields:
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        Content-Type: keep
+
+# CrowdSec bouncer
+experimental:
+  plugins:
+    bouncer:
+      moduleName: github.com/maxlerebourg/crowdsec-bouncer-traefik-plugin
+      version: v1.8.2
+
 entryPoints:
   traefik:
     address: ":8082"

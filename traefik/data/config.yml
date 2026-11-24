@@ -8,6 +8,20 @@ http:
         contentTypeNosniff: true
         browserXssFilter: true
         referrerPolicy: "same-origin"
+    # Applied to every public router via: traefik.http.routers.<name>.middlewares=crowdsec@docker
+    # (first in the chain, see README). Defined here rather than as labels on the
+    # traefik service itself, so that service never needs "traefik.enable=true" (see
+    # traefik/docker-compose.yml for why that matters). crowdsecLapiKeyFile reads the
+    # bouncer key from a file instead of a literal value, because this static file is
+    # not passed through compose's ${VAR} substitution.
+    crowdsec:
+      plugin:
+        bouncer:
+          enabled: true
+          crowdsecMode: live
+          crowdsecLapiScheme: http
+          crowdsecLapiHost: "crowdsec:8080"
+          crowdsecLapiKeyFile: /run/secrets/crowdsec-bouncer-key
 
 
 tls:

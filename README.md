@@ -202,6 +202,17 @@ Setup (Services are a recent Tailscale feature: check their current status and p
 
 Notes: Profilarr's `ORIGIN` is set to `https://profilarr.${TAILNET_DOMAIN}`, so its forms only work through that URL (through the `localhost:6868` SSH tunnel its form submits may be rejected as cross-site). Do **not** use `tailscale funnel`: it would expose the services to the Internet.
 
+#### Exit node
+
+The NAS can also act as an [exit node](https://tailscale.com/kb/1103/exit-nodes), routing a tailnet device's whole internet connection through your home network (e.g. to use your home IP while away). It can run as a subnet router and an exit node at the same time.
+
+1. Add `--advertise-exit-node` to `TS_EXTRA_ARGS` in `.env` (combine with other flags, e.g. `TS_EXTRA_ARGS=--advertise-tags=tag:nas --advertise-exit-node`) and restart the `tailscale` container.
+2. Enable IPv6 forwarding too, not just IPv4 (`net.ipv6.conf.all.forwarding=1` alongside the `net.ipv4.ip_forward=1` already needed for the subnet router) — otherwise clients fall back to IPv4-only while using the exit node.
+3. In the Tailscale admin console, open the NAS machine and approve it as an exit node (or add it to `autoApprovers.exitNode` in the ACL policy, e.g. for its tag).
+4. On each client, pick the NAS as the exit node (mobile/desktop app settings, or `tailscale set --exit-node=<nas-name>` on CLI clients). Enable "Allow LAN access" there if you still want to reach local devices directly while it's on.
+
+If IPv6 traffic routes through the exit node but IPv4 times out, check `docker exec tailscale iptables -t nat -L ts-postrouting -n -v`: if the `MASQUERADE` rule shows 0 matched packets (while `ip6tables` shows nonzero), Docker's own native-nftables IPv4 NAT is conflicting with tailscaled's bundled legacy-iptables rules on the same `POSTROUTING` hook (Docker doesn't NAT IPv6 by default, so there's no conflict there). `TS_DEBUG_FIREWALL_MODE: nftables` in `docker-compose.yml` fixes it by putting tailscale's rules in the same framework Docker already uses.
+
 ## Upgrading Services
 
 All services can be upgraded with:

@@ -28,6 +28,13 @@ services:
       TS_ROUTES: ${TS_ROUTES:?Set TS_ROUTES in .env}
       TS_ACCEPT_DNS: "false"
       TS_EXTRA_ARGS: ${TS_EXTRA_ARGS?Set TS_EXTRA_ARGS in .env (may be empty)}
+      # Forces tailscaled to manage its rules via nftables instead of its bundled legacy
+      # iptables. On this host Docker's own IPv4 NAT (for its bridge networks) is native
+      # nftables; with legacy iptables, tailscale's IPv4 MASQUERADE rule for the exit node
+      # never fired (0 packets matched) because the two rulesets' postrouting hooks
+      # conflicted, while IPv6 worked fine (Docker doesn't NAT IPv6). nftables puts
+      # tailscale's rules in the same framework as Docker's, removing the conflict.
+      TS_DEBUG_FIREWALL_MODE: nftables
       TZ: ${TZ:?Set TZ in .env}
 
     volumes:

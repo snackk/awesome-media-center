@@ -17,8 +17,8 @@ Traefik acts as a reverse proxy for the **user-facing** services only, listening
 | **Internet, via Traefik (HTTPS)** | Emby, Seerr, Immich, Navidrome, HomeControl (`home.<domain>`) |
 | **Internet, router port forward** | `80`, `443` (Traefik), `51413` TCP/UDP (Transmission peers) |
 | **LAN only, published port** | None. Emby is only reachable through Traefik (HTTPS) |
-| **Tailnet only, via Tailscale Services (HTTPS)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid`, `picard` and `traefik` (dashboard) at `https://<name>.<tailnet>.ts.net`. Only devices in your tailnet reach them (see [Tailscale Services](#tailscale-services-internal-admin-uis)) |
-| **Localhost only (SSH tunnel fallback)** | The same UIs bound to `127.0.0.1`: Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Picard `5800`, Portainer `9000`, Traefik dashboard `8082` |
+| **Tailnet only, via Tailscale Services (HTTPS)** | `portainer`, `radarr`, `sonarr`, `prowlarr`, `profilarr`, `transmission`, `debrid`, `picard`, `static` and `traefik` (dashboard) at `https://<name>.<tailnet>.ts.net`. Only devices in your tailnet reach them (see [Tailscale Services](#tailscale-services-internal-admin-uis)) |
+| **Localhost only (SSH tunnel fallback)** | The same UIs bound to `127.0.0.1`: Radarr `7878`, Sonarr `8989`, Prowlarr `9696`, Profilarr `6868`, Transmission `9091`, Debrid `6500`, Picard `5800`, Portainer `9000`, Static pages `8083`, Traefik dashboard `8082` |
 | **Not reachable from outside Docker** | FlareSolverr, Immich database/Redis/machine learning, CrowdSec LAPI (reached by Traefik via Docker DNS on the `web` network only, never published) |
 
 Admin tools never go through Traefik. They are published to your tailnet by Tailscale (one name per service, see [Tailscale Services](#tailscale-services-internal-admin-uis)); as a fallback use an SSH tunnel, e.g. `ssh -L 9000:127.0.0.1:9000 user@nas` and open `http://localhost:9000`.
@@ -143,6 +143,10 @@ Home automation dashboard (`homecontrol/`). It runs with `network_mode: host` so
 
 Music tagger (`picard/`, [`jlesage/musicbrainz-picard`](https://github.com/jlesage/docker-musicbrainz-picard)) with its desktop UI served in the browser. It mounts the music library `${DATA_ROOT}/music` **read-write** (Picard rewrites tags; Navidrome mounts the same folder read-only and picks the changes up on its next scan); settings and plugins live in `${CONFIG_ROOT}/picard`. The UI has no login of its own, so it is only published to your tailnet as `https://picard.<tailnet>` (see [Tailscale Services](#tailscale-services-internal-admin-uis)) and bound to `127.0.0.1:5800`.
 
+### Static pages
+
+Plain static HTML pages (`static/`, `nginx:alpine`) for one-off pages that don't warrant their own service. The pages themselves are **not** committed to this (public) repository: they live on the host at `${DATA_ROOT}/static/html` and are served read-only from there; drop a new page in that folder and it's served immediately, no rebuild needed. It has no authentication of its own, so like Picard it is not routed through Traefik or published to the Internet: bound to `127.0.0.1:8083` and published to your tailnet as `https://static.<tailnet>` (see [Tailscale Services](#tailscale-services-internal-admin-uis)).
+
 ### SMB share (Samba)
 
 File share of the media folders for Mac, iPhone and Windows. Samba runs on the NAS host (not in Docker); the config and the setup steps are in [`samba/`](samba/README.md). It exposes `/media/data` as `media` **without** `configs/`, reachable only from the home LAN and over Tailscale (`smb://snackk-nas.<tailnet>/media`), never from the Internet.
@@ -187,6 +191,7 @@ The internal admin UIs are not routed through Traefik or the Internet. Each one 
 | Transmission | `https://transmission.<tailnet>` | `9091` |
 | Debrid | `https://debrid.<tailnet>` | `6500` |
 | MusicBrainz Picard | `https://picard.<tailnet>` | `5800` |
+| Static pages | `https://static.<tailnet>` | `8083` |
 | Traefik dashboard | `https://traefik.<tailnet>` | `8082` |
 
 (`<tailnet>` is your tailnet DNS suffix, e.g. `tail1a2b3.ts.net`; set it as `TAILNET_DOMAIN` in `.env`.)

@@ -15,6 +15,9 @@ services:
       # Pages are not versioned here (public repo): they live on the host at
       # ${DATA_ROOT}/static/html, managed out of band.
       - ${DATA_ROOT:?Set DATA_ROOT in .env}/static/html:/usr/share/nginx/html:ro
+      # Enables autoindex (see default.conf) so the root lists whatever pages
+      # are dropped into that folder, for easy browsing.
+      - ./default.conf:/etc/nginx/conf.d/default.conf:ro
 
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]

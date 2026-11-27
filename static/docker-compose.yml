@@ -1,0 +1,29 @@
+services:
+  static:
+    image: nginx:alpine
+    container_name: static
+    restart: unless-stopped
+
+    # Tailnet-only: no "web" network and no Traefik labels, so this never gets a
+    # public hostname. Bound to 127.0.0.1 like Portainer/Picard, then published as
+    # its own Tailscale Service by tailscale/services.sh (see "Tailscale Services"
+    # in the README).
+    ports:
+      - "127.0.0.1:8083:80"
+
+    volumes:
+      # Pages are not versioned here (public repo): they live on the host at
+      # ${DATA_ROOT}/static/html, managed out of band.
+      - ${DATA_ROOT:?Set DATA_ROOT in .env}/static/html:/usr/share/nginx/html:ro
+
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

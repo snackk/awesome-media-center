@@ -24,6 +24,7 @@ SERVICES=(
   "transmission:9091"
   "debrid:6500"
   "picard:5800"
+  "static:8083"
   "traefik:8082"
 )
 

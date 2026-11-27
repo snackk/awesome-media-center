@@ -31,7 +31,7 @@ Everything lives in a pool mounted at `/mnt/pool` (`media/`, `downloads/`, `conf
 
 ```sh
 cp .env.example .env
-for d in traefik crowdsec portainer emby arr transmission debrid immich navidrome picard homecontrol tailscale; do ln -sf ../.env "$d/.env"; done
+for d in traefik crowdsec portainer emby arr transmission debrid immich navidrome picard homecontrol tailscale static; do ln -sf ../.env "$d/.env"; done
 ```
 
 Create the shared networks once: `docker network create web` (Traefik and public services) and `docker network create arr` (internal: *arr stack and download clients).
